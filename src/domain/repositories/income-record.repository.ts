@@ -1,0 +1,7 @@
+import { IncomeRecord, CreateIncomeRecordDto } from '../models/income-record.model';
+
+export abstract class IncomeRecordRepository {
+  abstract getAll(dateFrom?: string, dateTo?: string): Promise<IncomeRecord[]>;
+  abstract create(dto: CreateIncomeRecordDto): Promise<IncomeRecord>;
+  abstract getTotals(dateFrom?: string, dateTo?: string): Promise<{ usd: number; lbp: number }>;
+}

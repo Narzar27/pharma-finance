@@ -1,1 +1,64 @@
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@theme {
+  --color-navy-950: #08111a;
+  --color-navy-900: #0f1923;
+  --color-navy-800: #16222e;
+  --color-navy-700: #1c2f40;
+  --color-navy-600: #243a50;
+  --color-navy-500: #2e4d68;
+  --color-gold-400: #e8c068;
+  --color-gold-500: #d4a853;
+  --color-gold-600: #b8923f;
+  --color-slate-text: #e8edf2;
+  --color-muted-text: #7a8f9e;
+  --color-dim-text: #4a6070;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-sans: 'Outfit', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0f1923;
+  color: #e8edf2;
+  font-family: 'Outfit', system-ui, sans-serif;
+  height: 100%;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0f1923; }
+::-webkit-scrollbar-thumb { background: #243a50; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2e4d68; }
+
+/* Number formatting — always use mono */
+.num { font-family: 'JetBrains Mono', monospace; }
+
+/* Gold underline for section headers */
+.gold-line::after {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 2px;
+  background: #d4a853;
+  margin-top: 6px;
+}
+
+/* Fade-in animation */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-up { animation: fadeUp 0.35s ease both; }
+.fade-up-1 { animation-delay: 0.05s; }
+.fade-up-2 { animation-delay: 0.10s; }
+.fade-up-3 { animation-delay: 0.15s; }
+.fade-up-4 { animation-delay: 0.20s; }
+.fade-up-5 { animation-delay: 0.25s; }
