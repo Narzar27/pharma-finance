@@ -1,5 +1,5 @@
 import {
-  Component, ChangeDetectionStrategy, inject, signal, OnInit
+  Component, ChangeDetectionStrategy, inject, signal, computed, OnInit
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TopBarComponent } from '../../core/layout/top-bar/top-bar.component';
@@ -10,6 +10,16 @@ import { CreateIncomeRecordUseCase } from '../../../application/use-cases/income
 import { IncomeRecord } from '../../../domain/models/income-record.model';
 import { Currency } from '../../../domain/models/invoice.model';
 
+type Preset = 'today' | 'this-week' | 'this-month' | 'last-month' | 'all' | 'custom';
+
+interface IncomeRow {
+  amount: number;
+  currency: Currency;
+  date: string;
+  source: string;
+  notes: string;
+}
+
 @Component({
   selector: 'app-income',
   standalone: true,
@@ -17,109 +27,160 @@ import { Currency } from '../../../domain/models/invoice.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-top-bar title="Income">
-      <button (click)="showForm.set(true)"
-              style="padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:600;border:none;cursor:pointer;background:linear-gradient(135deg,#d4a853,#b8923f);color:#08111a;">
-        + Add Income
+      <button class="btn-primary" (click)="openForm()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add Income
       </button>
     </app-top-bar>
 
-    <div style="padding:28px;" class="fade-up">
+    <div style="padding:28px;">
+
+      <!-- Filters row -->
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:20px;flex-wrap:wrap;">
+        @for (p of presets; track p.value) {
+          <button (click)="selectPreset(p.value)"
+                  [class]="preset() === p.value ? 'btn-primary' : 'btn-ghost'"
+                  style="font-size:.78rem;padding:7px 14px;">
+            {{ p.label }}
+          </button>
+        }
+        @if (preset() === 'custom') {
+          <input class="input font-mono" type="date" [(ngModel)]="customFrom"
+                 (ngModelChange)="onCustomChange()" style="width:auto;" />
+          <span style="color:var(--text-dim);font-size:.8rem;">to</span>
+          <input class="input font-mono" type="date" [(ngModel)]="customTo"
+                 (ngModelChange)="onCustomChange()" style="width:auto;" />
+        }
+        <div style="margin-left:auto;">
+          <select class="input" style="width:auto;" [(ngModel)]="filterCurrency" (ngModelChange)="onCurrencyChange()">
+            <option value="">All Currencies</option>
+            <option value="USD">USD only</option>
+            <option value="LBP">LBP only</option>
+          </select>
+        </div>
+      </div>
 
       <!-- Totals -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;max-width:500px;">
-        <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;padding:18px;" class="fade-up fade-up-1">
-          <p style="font-size:0.68rem;font-weight:500;color:#7a8f9e;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px;">Total (USD)</p>
-          <p class="num" style="font-size:1.3rem;font-weight:600;color:#27ae60;margin:0;">{{ totalUsd() | currencyFormat:'USD' }}</p>
-        </div>
-        <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;padding:18px;" class="fade-up fade-up-2">
-          <p style="font-size:0.68rem;font-weight:500;color:#7a8f9e;letter-spacing:0.08em;text-transform:uppercase;margin:0 0 6px;">Total (LBP)</p>
-          <p class="num" style="font-size:1.3rem;font-weight:600;color:#27ae60;margin:0;">{{ totalLbp() | currencyFormat:'LBP' }}</p>
-        </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:28px;max-width:520px;">
+        @if (filterCurrency !== 'LBP') {
+          <div class="stat-card fade-up fade-up-1">
+            <p class="stat-label">Total — USD</p>
+            <p class="stat-value" style="color:var(--green);">{{ filteredUsd() | currencyFormat:'USD' }}</p>
+            <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">{{ filteredUsdCount() }} records</p>
+          </div>
+        }
+        @if (filterCurrency !== 'USD') {
+          <div class="stat-card fade-up fade-up-2">
+            <p class="stat-label">Total — LBP</p>
+            <p class="stat-value" style="color:var(--green);">{{ filteredLbp() | currencyFormat:'LBP' }}</p>
+            <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">{{ filteredLbpCount() }} records</p>
+          </div>
+        }
       </div>
 
       <!-- Add modal -->
       @if (showForm()) {
-        <div style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(8,17,26,0.8);">
-          <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;padding:28px;width:100%;max-width:400px;" class="fade-up">
-            <h3 style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:#e8edf2;margin:0 0 20px;font-weight:400;">New Income Record</h3>
-            <form (ngSubmit)="onSubmit()">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-                <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Amount *</label>
-                  <input type="number" [(ngModel)]="form.amount" name="amount" required min="0" step="0.01"
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;font-family:'JetBrains Mono',monospace;" />
-                </div>
-                <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Currency *</label>
-                  <select [(ngModel)]="form.currency" name="currency"
-                          style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;">
+        <div class="modal-overlay" (click)="closeIfBackdrop($event)">
+          <div class="modal fade-up" style="max-width:680px;max-height:90vh;display:flex;flex-direction:column;" (click)="$event.stopPropagation()">
+
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-shrink:0;">
+              <h3 style="font-family:'DM Serif Display',serif;font-size:1.15rem;color:var(--text-primary);margin:0;font-weight:400;">Add Income Records</h3>
+              <span style="font-size:.75rem;color:var(--text-dim);">{{ rows.length }} {{ rows.length === 1 ? 'record' : 'records' }}</span>
+            </div>
+
+            <!-- Column headers -->
+            <div style="display:grid;grid-template-columns:120px 1fr 80px 1fr 36px;gap:8px;margin-bottom:6px;padding:0 2px;flex-shrink:0;">
+              <span class="label" style="margin:0;">Date</span>
+              <span class="label" style="margin:0;">Amount</span>
+              <span class="label" style="margin:0;">Cur.</span>
+              <span class="label" style="margin:0;">Source</span>
+              <span></span>
+            </div>
+
+            <!-- Rows -->
+            <div style="overflow-y:auto;flex:1;padding-right:2px;">
+              @for (row of rows; track $index; let i = $index) {
+                <div style="display:grid;grid-template-columns:120px 1fr 80px 1fr 36px;gap:8px;margin-bottom:8px;align-items:center;">
+                  <input class="input font-mono" type="date"
+                         [name]="'date_' + i" [(ngModel)]="row.date" style="padding:8px 10px;font-size:.8rem;" />
+                  <input class="input font-mono" type="number" min="0" step="0.01" placeholder="0.00"
+                         [name]="'amount_' + i" [(ngModel)]="row.amount" style="padding:8px 10px;font-size:.8rem;" />
+                  <select class="input" [name]="'currency_' + i" [(ngModel)]="row.currency" style="padding:8px 10px;font-size:.8rem;">
                     <option value="USD">USD</option>
                     <option value="LBP">LBP</option>
                   </select>
+                  <input class="input" type="text" placeholder="Source (optional)"
+                         [name]="'source_' + i" [(ngModel)]="row.source" style="padding:8px 10px;font-size:.8rem;" />
+                  <button type="button" (click)="removeRow(i)" [disabled]="rows.length === 1"
+                          style="width:36px;height:36px;border-radius:var(--radius-sm);background:none;border:1px solid var(--border);cursor:pointer;color:var(--text-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;"
+                          [style.opacity]="rows.length === 1 ? '0.3' : '1'"
+                          (mouseenter)="rows.length > 1 && $any($event.currentTarget).style.setProperty('color','var(--red)')"
+                          (mouseleave)="$any($event.currentTarget).style.setProperty('color','var(--text-dim)')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  </button>
                 </div>
-                <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Date *</label>
-                  <input type="date" [(ngModel)]="form.date" name="date" required
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;font-family:'JetBrains Mono',monospace;" />
-                </div>
-                <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Source</label>
-                  <input type="text" [(ngModel)]="form.source" name="source" placeholder="e.g. Daily sales"
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;" />
-                </div>
-                <div style="grid-column:1/-1;">
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Notes</label>
-                  <input type="text" [(ngModel)]="form.notes" name="notes"
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;" />
-                </div>
-              </div>
-              <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" (click)="showForm.set(false)"
-                        style="padding:8px 16px;border-radius:8px;font-size:0.8rem;font-weight:500;border:1px solid #243a50;background:none;color:#7a8f9e;cursor:pointer;">
-                  Cancel
+              }
+            </div>
+
+            <!-- Add row + actions -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);flex-shrink:0;">
+              <button type="button" class="btn-ghost" style="font-size:.78rem;" (click)="addRow()">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                Add Row
+              </button>
+              <div style="display:flex;gap:10px;">
+                <button type="button" class="btn-ghost" (click)="showForm.set(false)">Cancel</button>
+                <button type="button" class="btn-primary" [disabled]="saving()" (click)="onSubmit()">
+                  @if (saving()) {
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin .7s linear infinite;"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                    Saving...
+                  } @else {
+                    Save {{ rows.length === 1 ? '1 Record' : rows.length + ' Records' }}
+                  }
                 </button>
-                <button type="submit" [disabled]="saving()"
-                        style="padding:8px 16px;border-radius:8px;font-size:0.8rem;font-weight:600;border:none;cursor:pointer;background:linear-gradient(135deg,#d4a853,#b8923f);color:#08111a;">
-                  {{ saving() ? 'Saving...' : 'Save' }}
-                </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       }
 
       <!-- Records table -->
-      <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;overflow:hidden;">
-        <table style="width:100%;border-collapse:collapse;">
-          <thead>
-            <tr style="border-bottom:1px solid #1c2f40;">
-              <th style="padding:10px 20px;text-align:left;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Date</th>
-              <th style="padding:10px 12px;text-align:right;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Amount</th>
-              <th style="padding:10px 12px;text-align:center;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Cur.</th>
-              <th style="padding:10px 12px;text-align:left;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Source</th>
-              <th style="padding:10px 20px 10px 12px;text-align:left;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            @if (loading()) {
-              <tr><td colspan="5" style="padding:32px;text-align:center;color:#4a6070;font-size:0.875rem;">Loading...</td></tr>
-            } @else if (records().length === 0) {
-              <tr><td colspan="5" style="padding:32px;text-align:center;color:#4a6070;font-size:0.875rem;">No income records yet.</td></tr>
-            } @else {
-              @for (r of records(); track r.id) {
-                <tr style="border-bottom:1px solid #1c2f40;">
-                  <td style="padding:11px 20px;"><span class="num" style="font-size:0.8rem;color:#7a8f9e;">{{ r.date }}</span></td>
-                  <td style="padding:11px 12px;text-align:right;"><span class="num" style="font-size:0.82rem;color:#27ae60;">{{ r.amount | currencyFormat:r.currency }}</span></td>
-                  <td style="padding:11px 12px;text-align:center;"><app-currency-badge [currency]="r.currency" /></td>
-                  <td style="padding:11px 12px;font-size:0.8rem;color:#e8edf2;">{{ r.source ?? '—' }}</td>
-                  <td style="padding:11px 20px 11px 12px;font-size:0.8rem;color:#4a6070;">{{ r.notes ?? '—' }}</td>
+      @if (loading()) {
+        <div style="padding:56px;text-align:center;color:var(--text-dim);font-size:.875rem;">Loading records...</div>
+      } @else if (filtered().length === 0) {
+        <div style="text-align:center;padding:72px;color:var(--text-dim);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 14px;display:block;opacity:.35;"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          <p style="font-size:.875rem;margin:0 0 16px;">No records for this period</p>
+          <button class="btn-primary" (click)="openForm()">Add a record</button>
+        </div>
+      } @else {
+        <div class="table-wrap fade-up">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th style="text-align:right;">Amount</th>
+                <th style="text-align:center;">Cur.</th>
+                <th>Source</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of filtered(); track r.id) {
+                <tr>
+                  <td><span class="font-mono" style="font-size:.8rem;color:var(--text-secondary);">{{ r.date }}</span></td>
+                  <td style="text-align:right;"><span class="font-mono" style="font-size:.82rem;color:var(--green);">{{ r.amount | currencyFormat:r.currency }}</span></td>
+                  <td style="text-align:center;"><app-currency-badge [currency]="r.currency" /></td>
+                  <td style="font-size:.82rem;color:var(--text-primary);">{{ r.source ?? '—' }}</td>
+                  <td style="font-size:.8rem;color:var(--text-dim);">{{ r.notes ?? '—' }}</td>
                 </tr>
               }
-            }
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      }
     </div>
+    <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
   `,
 })
 export class IncomeComponent implements OnInit {
@@ -130,44 +191,98 @@ export class IncomeComponent implements OnInit {
   saving = signal(false);
   showForm = signal(false);
   records = signal<IncomeRecord[]>([]);
+  preset = signal<Preset>('this-month');
 
-  totalUsd = signal(0);
-  totalLbp = signal(0);
+  filterCurrency = '';
+  customFrom = '';
+  customTo = '';
+  rows: IncomeRow[] = [];
 
-  form = {
-    amount: 0,
-    currency: 'USD' as Currency,
-    date: new Date().toISOString().split('T')[0],
-    source: '',
-    notes: '',
-  };
+  presets: { value: Preset; label: string }[] = [
+    { value: 'today',      label: 'Today' },
+    { value: 'this-week',  label: 'This Week' },
+    { value: 'this-month', label: 'This Month' },
+    { value: 'last-month', label: 'Last Month' },
+    { value: 'all',        label: 'All Time' },
+    { value: 'custom',     label: 'Custom' },
+  ];
 
-  async ngOnInit() {
-    await this.load();
+  filtered      = computed(() => {
+    const cur = this.filterCurrency;
+    return cur ? this.records().filter(r => r.currency === cur) : this.records();
+  });
+  filteredUsd      = computed(() => this.filtered().filter(r => r.currency === 'USD').reduce((s, r) => s + r.amount, 0));
+  filteredLbp      = computed(() => this.filtered().filter(r => r.currency === 'LBP').reduce((s, r) => s + r.amount, 0));
+  filteredUsdCount = computed(() => this.filtered().filter(r => r.currency === 'USD').length);
+  filteredLbpCount = computed(() => this.filtered().filter(r => r.currency === 'LBP').length);
+
+  async ngOnInit() { await this.load(); }
+
+  openForm() {
+    this.rows = [this.emptyRow()];
+    this.showForm.set(true);
   }
 
+  addRow() { this.rows = [...this.rows, this.emptyRow()]; }
+
+  removeRow(i: number) { this.rows = this.rows.filter((_, idx) => idx !== i); }
+
+  selectPreset(p: Preset) {
+    this.preset.set(p);
+    if (p !== 'custom') this.load();
+  }
+
+  onCustomChange() { if (this.customFrom && this.customTo) this.load(); }
+  onCurrencyChange() {}
+
   async load() {
+    const range = this.getRange();
     this.loading.set(true);
-    const records = await this.listIncome.execute();
-    this.records.set(records);
-    this.totalUsd.set(records.filter(r => r.currency === 'USD').reduce((s, r) => s + r.amount, 0));
-    this.totalLbp.set(records.filter(r => r.currency === 'LBP').reduce((s, r) => s + r.amount, 0));
+    this.records.set(await this.listIncome.execute(range?.from, range?.to));
     this.loading.set(false);
   }
 
   async onSubmit() {
-    if (!this.form.amount || !this.form.date) return;
+    const valid = this.rows.filter(r => r.amount > 0 && r.date);
+    if (!valid.length) return;
     this.saving.set(true);
-    await this.createIncome.execute({
-      amount: this.form.amount,
-      currency: this.form.currency,
-      date: this.form.date,
-      source: this.form.source || undefined,
-      notes: this.form.notes || undefined,
-    });
-    this.form = { amount: 0, currency: 'USD', date: new Date().toISOString().split('T')[0], source: '', notes: '' };
+    await Promise.all(valid.map(r => this.createIncome.execute({
+      amount: r.amount,
+      currency: r.currency,
+      date: r.date,
+      source: r.source || undefined,
+      notes: r.notes || undefined,
+    })));
     this.saving.set(false);
     this.showForm.set(false);
     await this.load();
+  }
+
+  closeIfBackdrop(e: MouseEvent) {
+    if (e.target === e.currentTarget) this.showForm.set(false);
+  }
+
+  private emptyRow(): IncomeRow {
+    return { amount: 0, currency: 'USD', date: new Date().toISOString().split('T')[0], source: '', notes: '' };
+  }
+
+  private getRange(): { from: string; to: string } | null {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const fmt = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    switch (this.preset()) {
+      case 'today':      return { from: fmt(now), to: fmt(now) };
+      case 'this-week': {
+        const monday = new Date(now);
+        monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+        const sunday = new Date(monday);
+        sunday.setDate(monday.getDate() + 6);
+        return { from: fmt(monday), to: fmt(sunday) };
+      }
+      case 'this-month': return { from: fmt(new Date(now.getFullYear(), now.getMonth(), 1)), to: fmt(new Date(now.getFullYear(), now.getMonth() + 1, 0)) };
+      case 'last-month': return { from: fmt(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: fmt(new Date(now.getFullYear(), now.getMonth(), 0)) };
+      case 'all':        return null;
+      case 'custom':     return this.customFrom && this.customTo ? { from: this.customFrom, to: this.customTo } : null;
+    }
   }
 }

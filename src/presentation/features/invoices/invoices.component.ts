@@ -12,6 +12,7 @@ import { CreateInvoiceUseCase } from '../../../application/use-cases/invoices/cr
 import { ListSuppliersUseCase } from '../../../application/use-cases/suppliers/list-suppliers.use-case';
 import { Invoice, Currency } from '../../../domain/models/invoice.model';
 import { Supplier } from '../../../domain/models/supplier.model';
+import { PaymentRepository } from '../../../domain/repositories/payment.repository';
 import { isOverdue } from '../../../domain/services/invoice-status.service';
 
 @Component({
@@ -21,31 +22,28 @@ import { isOverdue } from '../../../domain/services/invoice-status.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-top-bar title="Invoices">
-      <button (click)="showForm.set(true)"
-              style="padding:7px 14px;border-radius:8px;font-size:0.78rem;font-weight:600;border:none;cursor:pointer;background:linear-gradient(135deg,#d4a853,#b8923f);color:#08111a;">
-        + New Invoice
+      <button class="btn-primary" (click)="showForm.set(true)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Invoice
       </button>
     </app-top-bar>
 
-    <div style="padding:28px;" class="fade-up">
+    <div style="padding:28px;">
 
       <!-- Filters -->
       <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
-        <select [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()"
-                style="background:#16222e;border:1px solid #243a50;border-radius:8px;padding:7px 12px;font-size:0.8rem;color:#e8edf2;outline:none;cursor:pointer;">
+        <select class="input" style="width:auto;" [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()">
           <option value="">All Statuses</option>
           <option value="unpaid">Unpaid</option>
           <option value="partial">Partial</option>
           <option value="paid">Paid</option>
         </select>
-        <select [(ngModel)]="filterCurrency" (ngModelChange)="applyFilter()"
-                style="background:#16222e;border:1px solid #243a50;border-radius:8px;padding:7px 12px;font-size:0.8rem;color:#e8edf2;outline:none;cursor:pointer;">
+        <select class="input" style="width:auto;" [(ngModel)]="filterCurrency" (ngModelChange)="applyFilter()">
           <option value="">All Currencies</option>
           <option value="USD">USD</option>
           <option value="LBP">LBP</option>
         </select>
-        <select [(ngModel)]="filterSupplier" (ngModelChange)="applyFilter()"
-                style="background:#16222e;border:1px solid #243a50;border-radius:8px;padding:7px 12px;font-size:0.8rem;color:#e8edf2;outline:none;cursor:pointer;min-width:160px;">
+        <select class="input" style="width:auto;min-width:160px;" [(ngModel)]="filterSupplier" (ngModelChange)="applyFilter()">
           <option value="">All Suppliers</option>
           @for (s of suppliers(); track s.id) {
             <option [value]="s.id">{{ s.name }}</option>
@@ -55,15 +53,14 @@ import { isOverdue } from '../../../domain/services/invoice-status.service';
 
       <!-- New Invoice modal -->
       @if (showForm()) {
-        <div style="position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;background:rgba(8,17,26,0.8);">
-          <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;padding:28px;width:100%;max-width:460px;" class="fade-up">
-            <h3 style="font-family:'DM Serif Display',serif;font-size:1.1rem;color:#e8edf2;margin:0 0 20px;font-weight:400;">New Invoice</h3>
+        <div class="modal-overlay" (click)="closeIfBackdrop($event)">
+          <div class="modal fade-up" (click)="$event.stopPropagation()">
+            <h3 style="font-family:'DM Serif Display',serif;font-size:1.15rem;color:var(--text-primary);margin:0 0 20px;font-weight:400;">New Invoice</h3>
             <form (ngSubmit)="onSubmit()">
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
                 <div style="grid-column:1/-1;">
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Supplier *</label>
-                  <select [(ngModel)]="form.supplierId" name="supplierId" required
-                          style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;">
+                  <label class="label">Supplier *</label>
+                  <select class="input" [(ngModel)]="form.supplierId" name="supplierId" required>
                     <option value="">Select supplier...</option>
                     @for (s of suppliers(); track s.id) {
                       <option [value]="s.id">{{ s.name }}</option>
@@ -71,41 +68,32 @@ import { isOverdue } from '../../../domain/services/invoice-status.service';
                   </select>
                 </div>
                 <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Amount *</label>
-                  <input type="number" [(ngModel)]="form.amount" name="amount" required min="0" step="0.01"
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;font-family:'JetBrains Mono',monospace;" />
+                  <label class="label">Amount *</label>
+                  <input class="input font-mono" type="number" [(ngModel)]="form.amount" name="amount" required min="0" step="0.01" />
                 </div>
                 <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Currency *</label>
-                  <select [(ngModel)]="form.currency" name="currency"
-                          style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;">
+                  <label class="label">Currency *</label>
+                  <select class="input" [(ngModel)]="form.currency" name="currency">
                     <option value="USD">USD</option>
                     <option value="LBP">LBP</option>
                   </select>
                 </div>
                 <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Issue Date *</label>
-                  <input type="date" [(ngModel)]="form.issueDate" name="issueDate" required
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;font-family:'JetBrains Mono',monospace;" />
+                  <label class="label">Issue Date *</label>
+                  <input class="input font-mono" type="date" [(ngModel)]="form.issueDate" name="issueDate" required />
                 </div>
                 <div>
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Due Date *</label>
-                  <input type="date" [(ngModel)]="form.dueDate" name="dueDate" required
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;font-family:'JetBrains Mono',monospace;" />
+                  <label class="label">Due Date *</label>
+                  <input class="input font-mono" type="date" [(ngModel)]="form.dueDate" name="dueDate" required />
                 </div>
                 <div style="grid-column:1/-1;">
-                  <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Notes</label>
-                  <input type="text" [(ngModel)]="form.notes" name="notes"
-                         style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;" />
+                  <label class="label">Notes</label>
+                  <input class="input" type="text" [(ngModel)]="form.notes" name="notes" placeholder="Optional" />
                 </div>
               </div>
               <div style="display:flex;gap:10px;justify-content:flex-end;">
-                <button type="button" (click)="showForm.set(false)"
-                        style="padding:8px 16px;border-radius:8px;font-size:0.8rem;font-weight:500;border:1px solid #243a50;background:none;color:#7a8f9e;cursor:pointer;">
-                  Cancel
-                </button>
-                <button type="submit" [disabled]="saving()"
-                        style="padding:8px 16px;border-radius:8px;font-size:0.8rem;font-weight:600;border:none;cursor:pointer;background:linear-gradient(135deg,#d4a853,#b8923f);color:#08111a;">
+                <button type="button" class="btn-ghost" (click)="showForm.set(false)">Cancel</button>
+                <button type="submit" class="btn-primary" [disabled]="saving()">
                   {{ saving() ? 'Saving...' : 'Save Invoice' }}
                 </button>
               </div>
@@ -115,53 +103,68 @@ import { isOverdue } from '../../../domain/services/invoice-status.service';
       }
 
       <!-- Invoice table -->
-      <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;overflow:hidden;">
-        <table style="width:100%;border-collapse:collapse;">
-          <thead>
-            <tr style="border-bottom:1px solid #1c2f40;">
-              <th style="padding:10px 20px;text-align:left;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Supplier</th>
-              <th style="padding:10px 12px;text-align:right;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Amount</th>
-              <th style="padding:10px 12px;text-align:center;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Cur.</th>
-              <th style="padding:10px 12px;text-align:center;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Issue</th>
-              <th style="padding:10px 12px;text-align:center;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Due</th>
-              <th style="padding:10px 20px 10px 12px;text-align:center;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            @if (loading()) {
-              <tr><td colspan="6" style="padding:32px;text-align:center;color:#4a6070;font-size:0.875rem;">Loading...</td></tr>
-            } @else if (filtered().length === 0) {
-              <tr><td colspan="6" style="padding:32px;text-align:center;color:#4a6070;font-size:0.875rem;">No invoices found.</td></tr>
-            } @else {
+      @if (loading()) {
+        <div style="padding:56px;text-align:center;color:var(--text-dim);font-size:.875rem;">Loading invoices...</div>
+      } @else if (filtered().length === 0) {
+        <div style="text-align:center;padding:72px;color:var(--text-dim);">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 14px;display:block;opacity:.35;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <p style="font-size:.875rem;margin:0 0 16px;">No invoices found</p>
+          <button class="btn-primary" (click)="showForm.set(true)">Add your first invoice</button>
+        </div>
+      } @else {
+        <div class="table-wrap fade-up">
+          <table>
+            <thead>
+              <tr>
+                <th>Supplier</th>
+                <th style="text-align:right;">Amount</th>
+                <th style="text-align:right;">Remaining</th>
+                <th style="text-align:center;">Cur.</th>
+                <th style="text-align:center;">Issue</th>
+                <th style="text-align:center;">Due</th>
+                <th style="text-align:center;">Status</th>
+              </tr>
+            </thead>
+            <tbody>
               @for (inv of filtered(); track inv.id) {
-                <tr [style.background]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? 'rgba(231,76,60,0.03)' : 'transparent'"
-                    style="border-bottom:1px solid #1c2f40;cursor:pointer;transition:background 0.15s;"
-                    [routerLink]="['/invoices', inv.id]">
-                  <td style="padding:12px 20px;font-size:0.82rem;color:#e8edf2;">{{ inv.supplierName }}</td>
-                  <td style="padding:12px;text-align:right;">
-                    <span class="num" style="font-size:0.82rem;color:#e8edf2;">{{ inv.amount | currencyFormat:inv.currency }}</span>
+                <tr [class]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? 'row-danger' : ''"
+                    style="cursor:pointer;" [routerLink]="['/invoices', inv.id]">
+                  <td style="font-weight:500;">{{ inv.supplierName }}</td>
+                  <td style="text-align:right;">
+                    <span class="font-mono" style="font-size:.82rem;">{{ inv.amount | currencyFormat:inv.currency }}</span>
                   </td>
-                  <td style="padding:12px;text-align:center;">
+                  <td style="text-align:right;">
+                    @if (inv.status === 'partial') {
+                      <span class="font-mono" style="font-size:.82rem;color:var(--amber);">
+                        {{ remaining(inv) | currencyFormat:inv.currency }}
+                      </span>
+                    } @else if (inv.status === 'paid') {
+                      <span style="font-size:.78rem;color:var(--green);">Paid</span>
+                    } @else {
+                      <span class="font-mono" style="font-size:.82rem;color:var(--text-dim);">{{ inv.amount | currencyFormat:inv.currency }}</span>
+                    }
+                  </td>
+                  <td style="text-align:center;">
                     <app-currency-badge [currency]="inv.currency" />
                   </td>
-                  <td style="padding:12px;text-align:center;">
-                    <span class="num" style="font-size:0.78rem;color:#7a8f9e;">{{ inv.issueDate }}</span>
+                  <td style="text-align:center;">
+                    <span class="font-mono" style="font-size:.78rem;color:var(--text-secondary);">{{ inv.issueDate }}</span>
                   </td>
-                  <td style="padding:12px;text-align:center;">
-                    <span class="num" style="font-size:0.78rem;"
-                          [style.color]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? '#e74c3c' : '#7a8f9e'">
+                  <td style="text-align:center;">
+                    <span class="font-mono" style="font-size:.78rem;"
+                          [style.color]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? 'var(--red)' : 'var(--text-secondary)'">
                       {{ inv.dueDate }}
                     </span>
                   </td>
-                  <td style="padding:12px 20px 12px 12px;text-align:center;">
+                  <td style="text-align:center;">
                     <app-status-badge [status]="inv.status" />
                   </td>
                 </tr>
               }
-            }
-          </tbody>
-        </table>
-      </div>
+            </tbody>
+          </table>
+        </div>
+      }
     </div>
   `,
 })
@@ -169,6 +172,7 @@ export class InvoicesComponent implements OnInit {
   private listInvoices = inject(ListInvoicesUseCase);
   private createInvoice = inject(CreateInvoiceUseCase);
   private listSuppliers = inject(ListSuppliersUseCase);
+  private paymentRepo = inject(PaymentRepository);
 
   loading = signal(true);
   saving = signal(false);
@@ -176,6 +180,7 @@ export class InvoicesComponent implements OnInit {
   invoices = signal<Invoice[]>([]);
   filtered = signal<Invoice[]>([]);
   suppliers = signal<Supplier[]>([]);
+  private paymentTotals = new Map<string, { usd: number; lbp: number }>();
 
   filterStatus = '';
   filterCurrency = '';
@@ -193,14 +198,23 @@ export class InvoicesComponent implements OnInit {
   };
 
   async ngOnInit() {
-    const [invoices, suppliers] = await Promise.all([
+    const [invoices, suppliers, totals] = await Promise.all([
       this.listInvoices.execute(),
       this.listSuppliers.execute(),
+      this.paymentRepo.getAllTotals(),
     ]);
+    this.paymentTotals = totals;
     this.invoices.set(invoices);
     this.filtered.set(invoices);
     this.suppliers.set(suppliers);
     this.loading.set(false);
+  }
+
+  remaining(inv: Invoice): number {
+    const paid = this.paymentTotals.get(inv.id);
+    if (!paid) return inv.amount;
+    const paidInCurrency = inv.currency === 'USD' ? paid.usd : paid.lbp;
+    return Math.max(0, inv.amount - paidInCurrency);
   }
 
   applyFilter() {
@@ -227,8 +241,16 @@ export class InvoicesComponent implements OnInit {
     });
     this.saving.set(false);
     this.showForm.set(false);
-    const invoices = await this.listInvoices.execute();
+    const [invoices, totals] = await Promise.all([
+      this.listInvoices.execute(),
+      this.paymentRepo.getAllTotals(),
+    ]);
+    this.paymentTotals = totals;
     this.invoices.set(invoices);
     this.applyFilter();
+  }
+
+  closeIfBackdrop(e: MouseEvent) {
+    if (e.target === e.currentTarget) this.showForm.set(false);
   }
 }

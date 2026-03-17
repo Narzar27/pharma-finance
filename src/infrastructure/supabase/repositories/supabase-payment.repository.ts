@@ -50,6 +50,22 @@ export class SupabasePaymentRepository extends PaymentRepository {
     );
   }
 
+  async getAllTotals(): Promise<Map<string, { usd: number; lbp: number }>> {
+    const { data, error } = await this.db
+      .from('payments')
+      .select('invoice_id, amount_paid, currency');
+    if (error) throw error;
+
+    const map = new Map<string, { usd: number; lbp: number }>();
+    for (const row of data ?? []) {
+      const entry = map.get(row.invoice_id) ?? { usd: 0, lbp: 0 };
+      if (row.currency === 'USD') entry.usd += Number(row.amount_paid);
+      else entry.lbp += Number(row.amount_paid);
+      map.set(row.invoice_id, entry);
+    }
+    return map;
+  }
+
   private map(row: any): Payment {
     return {
       id: row.id,

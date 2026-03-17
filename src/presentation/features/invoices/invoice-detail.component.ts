@@ -1,5 +1,5 @@
 import {
-  Component, ChangeDetectionStrategy, inject, signal, OnInit
+  Component, ChangeDetectionStrategy, inject, signal, computed, OnInit
 } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -18,18 +18,23 @@ import { Currency } from '../../../domain/models/invoice.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-top-bar [title]="detail()?.invoice?.supplierName ?? 'Invoice Detail'">
-      <a routerLink="/invoices" style="font-size:0.78rem;color:#7a8f9e;text-decoration:none;">← Back</a>
+      <a routerLink="/invoices" class="btn-ghost" style="font-size:.78rem;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </a>
     </app-top-bar>
 
-    <div style="padding:28px;max-width:700px;" class="fade-up">
+    <div style="padding:28px;max-width:740px;">
+
       @if (loading()) {
-        <p style="color:#4a6070;font-size:0.875rem;">Loading...</p>
+        <div style="padding:56px;text-align:center;color:var(--text-dim);font-size:.875rem;">Loading...</div>
       } @else if (detail()) {
+
         <!-- Invoice summary card -->
-        <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;padding:24px;margin-bottom:20px;" class="fade-up fade-up-1">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;">
+        <div class="card fade-up fade-up-1" style="padding:24px;margin-bottom:16px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
             <div>
-              <h2 style="font-family:'DM Serif Display',serif;font-size:1.3rem;color:#e8edf2;margin:0 0 6px;font-weight:400;">
+              <h2 style="font-family:'DM Serif Display',serif;font-size:1.3rem;color:var(--text-primary);margin:0 0 10px;font-weight:400;">
                 {{ detail()!.invoice.supplierName }}
               </h2>
               <div style="display:flex;gap:8px;align-items:center;">
@@ -37,70 +42,76 @@ import { Currency } from '../../../domain/models/invoice.model';
                 <app-currency-badge [currency]="detail()!.invoice.currency" />
               </div>
             </div>
-            <p class="num" style="font-size:1.75rem;font-weight:600;color:#e8edf2;margin:0;">
+            <p class="font-mono" style="font-size:1.75rem;font-weight:600;color:var(--text-primary);margin:0;">
               {{ detail()!.invoice.amount | currencyFormat:detail()!.invoice.currency }}
             </p>
           </div>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;border-top:1px solid #1c2f40;padding-top:16px;">
+          <hr class="divider" style="margin-bottom:18px;" />
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
             <div>
-              <p style="font-size:0.68rem;color:#4a6070;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 3px;">Issue Date</p>
-              <p class="num" style="font-size:0.82rem;color:#7a8f9e;margin:0;">{{ detail()!.invoice.issueDate }}</p>
+              <p style="font-size:.65rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;margin:0 0 4px;">Issue Date</p>
+              <p class="font-mono" style="font-size:.82rem;color:var(--text-secondary);margin:0;">{{ detail()!.invoice.issueDate }}</p>
             </div>
             <div>
-              <p style="font-size:0.68rem;color:#4a6070;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 3px;">Due Date</p>
-              <p class="num" style="font-size:0.82rem;margin:0;"
-                 [style.color]="detail()!.invoice.status === 'paid' ? '#7a8f9e' : '#e74c3c'">
+              <p style="font-size:.65rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;margin:0 0 4px;">Due Date</p>
+              <p class="font-mono" style="font-size:.82rem;margin:0;"
+                 [style.color]="detail()!.invoice.status === 'paid' ? 'var(--text-secondary)' : 'var(--red)'">
                 {{ detail()!.invoice.dueDate }}
               </p>
             </div>
             <div>
-              <p style="font-size:0.68rem;color:#4a6070;text-transform:uppercase;letter-spacing:0.07em;margin:0 0 3px;">Total Paid</p>
-              <div>
-                @if (detail()!.totalPaid.usd > 0) {
-                  <p class="num" style="font-size:0.82rem;color:#27ae60;margin:0;">{{ detail()!.totalPaid.usd | currencyFormat:'USD' }}</p>
-                }
-                @if (detail()!.totalPaid.lbp > 0) {
-                  <p class="num" style="font-size:0.82rem;color:#27ae60;margin:0;">{{ detail()!.totalPaid.lbp | currencyFormat:'LBP' }}</p>
-                }
-                @if (detail()!.totalPaid.usd === 0 && detail()!.totalPaid.lbp === 0) {
-                  <p style="font-size:0.82rem;color:#4a6070;margin:0;">None</p>
-                }
-              </div>
+              <p style="font-size:.65rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;margin:0 0 4px;">Total Paid</p>
+              @if (detail()!.totalPaid.usd > 0) {
+                <p class="font-mono" style="font-size:.82rem;color:var(--green);margin:0;">{{ detail()!.totalPaid.usd | currencyFormat:'USD' }}</p>
+              }
+              @if (detail()!.totalPaid.lbp > 0) {
+                <p class="font-mono" style="font-size:.82rem;color:var(--green);margin:0;">{{ detail()!.totalPaid.lbp | currencyFormat:'LBP' }}</p>
+              }
+              @if (detail()!.totalPaid.usd === 0 && detail()!.totalPaid.lbp === 0) {
+                <p style="font-size:.82rem;color:var(--text-dim);margin:0;">None</p>
+              }
             </div>
+            @if (detail()!.invoice.status === 'partial') {
+              <div>
+                <p style="font-size:.65rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;margin:0 0 4px;">Remaining</p>
+                <p class="font-mono" style="font-size:.82rem;font-weight:600;color:var(--amber);margin:0;">
+                  {{ remaining() | currencyFormat:detail()!.invoice.currency }}
+                </p>
+              </div>
+            }
           </div>
           @if (detail()!.invoice.notes) {
-            <p style="font-size:0.8rem;color:#7a8f9e;margin:14px 0 0;border-top:1px solid #1c2f40;padding-top:14px;">{{ detail()!.invoice.notes }}</p>
+            <p style="font-size:.8rem;color:var(--text-secondary);margin:16px 0 0;border-top:1px solid var(--border);padding-top:14px;">
+              {{ detail()!.invoice.notes }}
+            </p>
           }
         </div>
 
         <!-- Add payment -->
         @if (detail()!.invoice.status !== 'paid') {
-          <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;padding:24px;margin-bottom:20px;" class="fade-up fade-up-2">
-            <h3 style="font-family:'DM Serif Display',serif;font-size:1rem;color:#e8edf2;margin:0 0 16px;font-weight:400;">Add Payment</h3>
-            <form (ngSubmit)="onAddPayment()" style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;">
-              <div>
-                <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Amount *</label>
-                <input type="number" [(ngModel)]="payForm.amount" name="payAmount" required min="0" step="0.01"
-                       style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;font-family:'JetBrains Mono',monospace;" />
+          <div class="card fade-up fade-up-2" style="padding:22px;margin-bottom:16px;">
+            <h3 style="font-family:'DM Serif Display',serif;font-size:1rem;color:var(--text-primary);margin:0 0 16px;font-weight:400;">Add Payment</h3>
+            <form (ngSubmit)="onAddPayment()">
+              <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:12px;">
+                <div>
+                  <label class="label">Amount *</label>
+                  <input class="input font-mono" type="number" [(ngModel)]="payForm.amount" name="payAmount" required min="0" step="0.01" />
+                </div>
+                <div>
+                  <label class="label">Currency</label>
+                  <select class="input" [(ngModel)]="payForm.currency" name="payCurrency">
+                    <option value="USD">USD</option>
+                    <option value="LBP">LBP</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="label">Date *</label>
+                  <input class="input font-mono" type="date" [(ngModel)]="payForm.paymentDate" name="payDate" required />
+                </div>
               </div>
-              <div>
-                <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Currency</label>
-                <select [(ngModel)]="payForm.currency" name="payCurrency"
-                        style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;">
-                  <option value="USD">USD</option>
-                  <option value="LBP">LBP</option>
-                </select>
-              </div>
-              <div>
-                <label style="display:block;font-size:0.72rem;font-weight:500;color:#7a8f9e;letter-spacing:0.07em;text-transform:uppercase;margin-bottom:6px;">Date</label>
-                <input type="date" [(ngModel)]="payForm.paymentDate" name="payDate" required
-                       style="width:100%;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;font-family:'JetBrains Mono',monospace;" />
-              </div>
-              <div style="grid-column:1/-1;display:flex;gap:10px;align-items:center;">
-                <input type="text" [(ngModel)]="payForm.notes" name="payNotes" placeholder="Notes (optional)"
-                       style="flex:1;background:#1c2f40;border:1px solid #243a50;border-radius:8px;padding:9px 12px;font-size:0.875rem;color:#e8edf2;outline:none;" />
-                <button type="submit" [disabled]="addingPayment()"
-                        style="padding:9px 20px;border-radius:8px;font-size:0.8rem;font-weight:600;border:none;cursor:pointer;background:linear-gradient(135deg,#d4a853,#b8923f);color:#08111a;white-space:nowrap;">
+              <div style="display:flex;gap:10px;align-items:center;">
+                <input class="input" style="flex:1;" type="text" [(ngModel)]="payForm.notes" name="payNotes" placeholder="Notes (optional)" />
+                <button type="submit" class="btn-primary" [disabled]="addingPayment()" style="white-space:nowrap;">
                   {{ addingPayment() ? 'Adding...' : 'Add Payment' }}
                 </button>
               </div>
@@ -110,28 +121,32 @@ import { Currency } from '../../../domain/models/invoice.model';
 
         <!-- Payment history -->
         @if (detail()!.payments.length > 0) {
-          <div style="background:#16222e;border:1px solid #243a50;border-radius:12px;overflow:hidden;" class="fade-up fade-up-3">
-            <div style="padding:16px 20px;border-bottom:1px solid #1c2f40;">
-              <h3 style="font-family:'DM Serif Display',serif;font-size:1rem;color:#e8edf2;margin:0;font-weight:400;">Payment History</h3>
+          <div class="table-wrap fade-up fade-up-3">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);background:var(--bg-elevated);">
+              <h3 class="section-title">Payment History</h3>
             </div>
-            <table style="width:100%;border-collapse:collapse;">
+            <table>
               <thead>
-                <tr style="border-bottom:1px solid #1c2f40;">
-                  <th style="padding:9px 20px;text-align:left;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Date</th>
-                  <th style="padding:9px 12px;text-align:right;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Amount</th>
-                  <th style="padding:9px 20px 9px 12px;text-align:left;font-size:0.68rem;font-weight:500;color:#4a6070;letter-spacing:0.08em;text-transform:uppercase;">Notes</th>
+                <tr>
+                  <th>Date</th>
+                  <th style="text-align:right;">Amount</th>
+                  <th>Notes</th>
                 </tr>
               </thead>
               <tbody>
                 @for (p of detail()!.payments; track p.id) {
-                  <tr style="border-bottom:1px solid #1c2f40;">
-                    <td style="padding:11px 20px;"><span class="num" style="font-size:0.8rem;color:#7a8f9e;">{{ p.paymentDate }}</span></td>
-                    <td style="padding:11px 12px;text-align:right;"><span class="num" style="font-size:0.82rem;color:#27ae60;">{{ p.amountPaid | currencyFormat:p.currency }}</span></td>
-                    <td style="padding:11px 20px 11px 12px;font-size:0.8rem;color:#4a6070;">{{ p.notes ?? '—' }}</td>
+                  <tr>
+                    <td><span class="font-mono" style="font-size:.8rem;color:var(--text-secondary);">{{ p.paymentDate }}</span></td>
+                    <td style="text-align:right;"><span class="font-mono" style="font-size:.82rem;color:var(--green);">{{ p.amountPaid | currencyFormat:p.currency }}</span></td>
+                    <td style="font-size:.8rem;color:var(--text-dim);">{{ p.notes ?? '—' }}</td>
                   </tr>
                 }
               </tbody>
             </table>
+          </div>
+        } @else if (detail()!.invoice.status !== 'paid') {
+          <div class="card fade-up fade-up-3" style="padding:20px;text-align:center;color:var(--text-dim);font-size:.8rem;">
+            No payments recorded yet
           </div>
         }
       }
@@ -146,6 +161,13 @@ export class InvoiceDetailComponent implements OnInit {
   loading = signal(true);
   addingPayment = signal(false);
   detail = signal<InvoiceDetail | null>(null);
+
+  remaining = computed(() => {
+    const d = this.detail();
+    if (!d) return 0;
+    const paid = d.invoice.currency === 'USD' ? d.totalPaid.usd : d.totalPaid.lbp;
+    return Math.max(0, d.invoice.amount - paid);
+  });
 
   payForm = {
     amount: 0,
@@ -173,7 +195,6 @@ export class InvoiceDetailComponent implements OnInit {
       paymentDate: this.payForm.paymentDate,
       notes: this.payForm.notes || undefined,
     });
-    // Reload
     const updated = await this.getDetail.execute(d.invoice.id);
     this.detail.set(updated);
     this.payForm.amount = 0;

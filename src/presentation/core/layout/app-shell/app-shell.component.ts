@@ -12,7 +12,7 @@ import { AuthService } from '../../auth/auth.service';
   template: `
     <div style="display:flex; min-height:100vh;">
       <app-sidebar (signOut)="onSignOut()" />
-      <main style="flex:1; margin-left:220px; min-height:100vh; background:#0f1923; overflow-y:auto;">
+      <main style="flex:1; margin-left:220px; min-height:100vh; background:var(--bg-base); overflow-y:auto; transition:background .25s;">
         <router-outlet />
       </main>
     </div>
