@@ -12,8 +12,8 @@ import { ThemeService } from '../../../core/theme/theme.service';
   template: `
     <div style="min-height:100vh; display:flex; background:var(--bg-base); transition:background .25s;">
 
-      <!-- Left panel — branding -->
-      <div style="flex:0 0 44%; display:flex; flex-direction:column; justify-content:space-between; padding:48px 52px; background:var(--bg-surface); border-right:1px solid var(--border); position:relative; overflow:hidden;">
+      <!-- Left panel — branding (hidden on mobile) -->
+      <div class="login-brand" style="flex:0 0 44%; display:flex; flex-direction:column; justify-content:space-between; padding:48px 52px; background:var(--bg-surface); border-right:1px solid var(--border); position:relative; overflow:hidden;">
 
         <!-- Decorative grid -->
         <div style="position:absolute;inset:0;pointer-events:none;opacity:.4;">
@@ -151,6 +151,9 @@ import { ThemeService } from '../../../core/theme/theme.service';
     </div>
     <style>
       @keyframes spin { to { transform: rotate(360deg); } }
+      @media (max-width: 767px) {
+        .login-brand { display: none !important; }
+      }
     </style>
   `,
 })

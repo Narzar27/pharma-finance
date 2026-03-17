@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, output, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { ThemeService } from '../../theme/theme.service';
+import { MenuService } from '../menu/menu.service';
 
 @Component({
   selector: 'app-sidebar',
@@ -8,14 +9,21 @@ import { ThemeService } from '../../theme/theme.service';
   imports: [RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <nav style="
+    <nav class="sidebar" [class.is-open]="menu.isOpen()" style="
       width:220px; height:100vh;
       background:var(--bg-surface);
       border-right:1px solid var(--border);
       display:flex; flex-direction:column;
       position:fixed; left:0; top:0; z-index:50;
       transition:background .25s, border-color .25s;
+      overflow-y:auto;
     ">
+      <!-- Mobile close button -->
+      <button class="mobile-close-btn" (click)="menu.close()"
+              style="display:none;position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:var(--radius-sm);background:var(--bg-hover);border:1px solid var(--border);cursor:pointer;color:var(--text-secondary);align-items:center;justify-content:center;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+
       <!-- Brand -->
       <div style="padding:22px 20px 18px; border-bottom:1px solid var(--border);">
         <div style="display:flex;align-items:center;gap:10px;">
@@ -40,6 +48,7 @@ import { ThemeService } from '../../theme/theme.service';
           <a [routerLink]="item.path"
              routerLinkActive="active-link"
              [routerLinkActiveOptions]="{exact: item.exact ?? false}"
+             (click)="menu.close()"
              class="nav-link"
              style="
                display:flex;align-items:center;gap:10px;
@@ -94,12 +103,16 @@ import { ThemeService } from '../../theme/theme.service';
         background: var(--bg-hover);
         color: var(--text-primary);
       }
+      @media (max-width: 767px) {
+        .mobile-close-btn { display: flex !important; }
+      }
     </style>
   `,
 })
 export class SidebarComponent {
   signOut = output<void>();
   theme = inject(ThemeService);
+  menu = inject(MenuService);
 
   navItems = [
     { path: '/dashboard', label: 'Dashboard', exact: true, icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>` },

@@ -3,6 +3,7 @@ import { RouterOutlet } from '@angular/router';
 import { Router } from '@angular/router';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { AuthService } from '../../auth/auth.service';
+import { MenuService } from '../menu/menu.service';
 
 @Component({
   selector: 'app-shell',
@@ -11,6 +12,7 @@ import { AuthService } from '../../auth/auth.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div style="display:flex; min-height:100vh;">
+      <div class="mobile-overlay" [class.is-open]="menu.isOpen()" (click)="menu.close()"></div>
       <app-sidebar (signOut)="onSignOut()" />
       <main style="flex:1; margin-left:220px; min-height:100vh; background:var(--bg-base); overflow-y:auto; transition:background .25s;">
         <router-outlet />
@@ -21,6 +23,7 @@ import { AuthService } from '../../auth/auth.service';
 export class AppShellComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  menu = inject(MenuService);
 
   async onSignOut() {
     await this.auth.signOut();

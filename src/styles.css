@@ -286,3 +286,67 @@ select.input { cursor: pointer; appearance: none; }
 
 :root.light .input { background: var(--bg-surface); border-color: var(--border); }
 :root.light .input:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-glow); }
+
+/* ── Mobile responsive ────────────────────────────────────── */
+.hamburger-btn { display: none; }
+.mobile-overlay {
+  display: none;
+  position: fixed; inset: 0; z-index: 45;
+  background: rgba(0,0,0,.5);
+  backdrop-filter: blur(2px);
+  animation: fadeIn .15s ease;
+}
+
+@media (max-width: 767px) {
+  /* Sidebar slides in/out */
+  .sidebar {
+    transform: translateX(-100%);
+    transition: transform .25s, background .25s, border-color .25s !important;
+  }
+  .sidebar.is-open { transform: translateX(0); }
+
+  /* Overlay visible when sidebar open */
+  .mobile-overlay.is-open { display: block; }
+
+  /* Main content full width */
+  main { margin-left: 0 !important; }
+
+  /* Hamburger visible */
+  .hamburger-btn {
+    display: flex;
+    align-items: center; justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: var(--radius-sm);
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .15s;
+  }
+  .hamburger-btn:hover { background: var(--bg-hover); }
+
+  /* Page padding reduced */
+  main > div[style*="padding:28px"],
+  main > div[style*="padding: 28px"] { padding: 16px !important; }
+
+  /* Tables scroll horizontally */
+  .table-wrap { overflow-x: auto; }
+  .table-wrap table { min-width: 480px; }
+
+  /* Modals full width */
+  .modal-overlay { align-items: flex-end; padding: 0; }
+  .modal {
+    margin: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    max-height: 90vh;
+    width: 100%;
+  }
+  .modal-sm { max-width: 100%; }
+}
+
+@media (min-width: 768px) {
+  /* Ensure sidebar always visible on desktop regardless of signal */
+  .sidebar { transform: none !important; }
+}
