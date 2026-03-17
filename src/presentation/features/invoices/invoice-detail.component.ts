@@ -1,7 +1,7 @@
 import {
   Component, ChangeDetectionStrategy, inject, signal, computed, OnInit
 } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { TopBarComponent } from '../../core/layout/top-bar/top-bar.component';
 import { CurrencyFormatPipe } from '../../shared/pipes/currency-format.pipe';
@@ -9,6 +9,8 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { CurrencyBadgeComponent } from '../../shared/components/currency-badge/currency-badge.component';
 import { GetInvoiceDetailUseCase, InvoiceDetail } from '../../../application/use-cases/invoices/get-invoice-detail.use-case';
 import { AddPaymentUseCase } from '../../../application/use-cases/invoices/add-payment.use-case';
+import { DeleteInvoiceUseCase } from '../../../application/use-cases/invoices/delete-invoice.use-case';
+import { DeletePaymentUseCase } from '../../../application/use-cases/invoices/delete-payment.use-case';
 import { Currency } from '../../../domain/models/invoice.model';
 
 @Component({
@@ -18,10 +20,25 @@ import { Currency } from '../../../domain/models/invoice.model';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-top-bar [title]="detail()?.invoice?.supplierName ?? 'Invoice Detail'">
-      <a routerLink="/invoices" class="btn-ghost" style="font-size:.78rem;">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-        Back
-      </a>
+      <div style="display:flex;gap:8px;align-items:center;">
+        @if (confirmDeleteInvoice()) {
+          <span style="font-size:.75rem;color:var(--text-secondary);">Delete this invoice?</span>
+          <button (click)="doDeleteInvoice()" style="padding:6px 12px;border-radius:var(--radius-sm);border:none;background:var(--red);color:#fff;font-size:.78rem;font-weight:600;cursor:pointer;">Delete</button>
+          <button (click)="confirmDeleteInvoice.set(false)" class="btn-ghost" style="font-size:.78rem;">Cancel</button>
+        } @else {
+          <button (click)="confirmDeleteInvoice.set(true)"
+                  style="padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:none;color:var(--text-dim);font-size:.78rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:color .15s,border-color .15s;"
+                  onmouseenter="this.style.color='var(--red)';this.style.borderColor='var(--red)'"
+                  onmouseleave="this.style.color='var(--text-dim)';this.style.borderColor='var(--border)'">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Delete Invoice
+          </button>
+          <a routerLink="/invoices" class="btn-ghost" style="font-size:.78rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+          </a>
+        }
+      </div>
     </app-top-bar>
 
     <div style="padding:28px;max-width:740px;">
@@ -131,6 +148,7 @@ import { Currency } from '../../../domain/models/invoice.model';
                   <th>Date</th>
                   <th style="text-align:right;">Amount</th>
                   <th>Notes</th>
+                  <th style="width:48px;"></th>
                 </tr>
               </thead>
               <tbody>
@@ -139,6 +157,23 @@ import { Currency } from '../../../domain/models/invoice.model';
                     <td><span class="font-mono" style="font-size:.8rem;color:var(--text-secondary);">{{ p.paymentDate }}</span></td>
                     <td style="text-align:right;"><span class="font-mono" style="font-size:.82rem;color:var(--green);">{{ p.amountPaid | currencyFormat:p.currency }}</span></td>
                     <td style="font-size:.8rem;color:var(--text-dim);">{{ p.notes ?? '—' }}</td>
+                    <td style="text-align:center;width:48px;">
+                      @if (deletingPaymentId() === p.id) {
+                        <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+                          <button (click)="confirmDeletePayment(p.id)"
+                                  style="padding:3px 8px;border-radius:4px;border:none;background:var(--red);color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;">Yes</button>
+                          <button (click)="deletingPaymentId.set(null)"
+                                  style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--text-secondary);font-size:.7rem;cursor:pointer;">No</button>
+                        </div>
+                      } @else {
+                        <button (click)="deletingPaymentId.set(p.id)"
+                                style="width:28px;height:28px;border-radius:4px;border:none;background:none;cursor:pointer;color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;"
+                                onmouseenter="this.style.color='var(--red)';this.style.background='var(--red-bg)'"
+                                onmouseleave="this.style.color='var(--text-dim)';this.style.background='none'">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                        </button>
+                      }
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -155,11 +190,16 @@ import { Currency } from '../../../domain/models/invoice.model';
 })
 export class InvoiceDetailComponent implements OnInit {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private getDetail = inject(GetInvoiceDetailUseCase);
   private addPayment = inject(AddPaymentUseCase);
+  private deleteInvoice = inject(DeleteInvoiceUseCase);
+  private deletePayment = inject(DeletePaymentUseCase);
 
   loading = signal(true);
   addingPayment = signal(false);
+  confirmDeleteInvoice = signal(false);
+  deletingPaymentId = signal<string | null>(null);
   detail = signal<InvoiceDetail | null>(null);
 
   remaining = computed(() => {
@@ -182,6 +222,22 @@ export class InvoiceDetailComponent implements OnInit {
     this.detail.set(result);
     if (result) this.payForm.currency = result.invoice.currency;
     this.loading.set(false);
+  }
+
+  async doDeleteInvoice() {
+    const d = this.detail();
+    if (!d) return;
+    await this.deleteInvoice.execute(d.invoice.id);
+    this.router.navigate(['/invoices']);
+  }
+
+  async confirmDeletePayment(paymentId: string) {
+    const d = this.detail();
+    if (!d) return;
+    await this.deletePayment.execute(paymentId);
+    this.deletingPaymentId.set(null);
+    const updated = await this.getDetail.execute(d.invoice.id);
+    this.detail.set(updated);
   }
 
   async onAddPayment() {

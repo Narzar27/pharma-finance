@@ -37,6 +37,11 @@ export class SupabaseIncomeRecordRepository extends IncomeRecordRepository {
     return this.map(data);
   }
 
+  async delete(id: string): Promise<void> {
+    const { error } = await this.db.from('income_records').delete().eq('id', id);
+    if (error) throw error;
+  }
+
   async getTotals(dateFrom?: string, dateTo?: string): Promise<{ usd: number; lbp: number }> {
     let query = this.db.from('income_records').select('amount, currency');
     if (dateFrom) query = query.gte('date', dateFrom);

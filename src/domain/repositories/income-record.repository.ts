@@ -3,5 +3,6 @@ import { IncomeRecord, CreateIncomeRecordDto } from '../models/income-record.mod
 export abstract class IncomeRecordRepository {
   abstract getAll(dateFrom?: string, dateTo?: string): Promise<IncomeRecord[]>;
   abstract create(dto: CreateIncomeRecordDto): Promise<IncomeRecord>;
+  abstract delete(id: string): Promise<void>;
   abstract getTotals(dateFrom?: string, dateTo?: string): Promise<{ usd: number; lbp: number }>;
 }

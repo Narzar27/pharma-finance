@@ -7,6 +7,7 @@ import { CurrencyFormatPipe } from '../../shared/pipes/currency-format.pipe';
 import { CurrencyBadgeComponent } from '../../shared/components/currency-badge/currency-badge.component';
 import { ListIncomeRecordsUseCase } from '../../../application/use-cases/income/list-income-records.use-case';
 import { CreateIncomeRecordUseCase } from '../../../application/use-cases/income/create-income-record.use-case';
+import { DeleteIncomeRecordUseCase } from '../../../application/use-cases/income/delete-income-record.use-case';
 import { IncomeRecord } from '../../../domain/models/income-record.model';
 import { Currency } from '../../../domain/models/invoice.model';
 
@@ -163,6 +164,7 @@ interface IncomeRow {
                 <th style="text-align:center;">Cur.</th>
                 <th>Source</th>
                 <th>Notes</th>
+                <th style="width:48px;"></th>
               </tr>
             </thead>
             <tbody>
@@ -173,6 +175,23 @@ interface IncomeRow {
                   <td style="text-align:center;"><app-currency-badge [currency]="r.currency" /></td>
                   <td style="font-size:.82rem;color:var(--text-primary);">{{ r.source ?? '—' }}</td>
                   <td style="font-size:.8rem;color:var(--text-dim);">{{ r.notes ?? '—' }}</td>
+                  <td style="text-align:center;width:48px;">
+                    @if (deletingId() === r.id) {
+                      <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+                        <button (click)="confirmDelete(r.id)"
+                                style="padding:3px 8px;border-radius:4px;border:none;background:var(--red);color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;">Yes</button>
+                        <button (click)="deletingId.set(null)"
+                                style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--text-secondary);font-size:.7rem;cursor:pointer;">No</button>
+                      </div>
+                    } @else {
+                      <button (click)="deletingId.set(r.id)"
+                              style="width:28px;height:28px;border-radius:4px;border:none;background:none;cursor:pointer;color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;"
+                              onmouseenter="this.style.color='var(--red)';this.style.background='var(--red-bg)'"
+                              onmouseleave="this.style.color='var(--text-dim)';this.style.background='none'">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -186,10 +205,12 @@ interface IncomeRow {
 export class IncomeComponent implements OnInit {
   private listIncome = inject(ListIncomeRecordsUseCase);
   private createIncome = inject(CreateIncomeRecordUseCase);
+  private deleteIncome = inject(DeleteIncomeRecordUseCase);
 
   loading = signal(true);
   saving = signal(false);
   showForm = signal(false);
+  deletingId = signal<string | null>(null);
   records = signal<IncomeRecord[]>([]);
   preset = signal<Preset>('this-month');
 
@@ -255,6 +276,12 @@ export class IncomeComponent implements OnInit {
     })));
     this.saving.set(false);
     this.showForm.set(false);
+    await this.load();
+  }
+
+  async confirmDelete(id: string) {
+    await this.deleteIncome.execute(id);
+    this.deletingId.set(null);
     await this.load();
   }
 

@@ -5,6 +5,7 @@ export abstract class InvoiceRepository {
   abstract getById(id: string): Promise<Invoice | null>;
   abstract create(dto: CreateInvoiceDto): Promise<Invoice>;
   abstract updateStatus(id: string, status: InvoiceStatus): Promise<void>;
+  abstract delete(id: string): Promise<void>;
   abstract getOverdue(): Promise<Invoice[]>;
   abstract getDueSoon(daysAhead: number): Promise<Invoice[]>;
 }

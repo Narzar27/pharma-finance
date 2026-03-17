@@ -9,6 +9,7 @@ import { StatusBadgeComponent } from '../../shared/components/status-badge/statu
 import { CurrencyBadgeComponent } from '../../shared/components/currency-badge/currency-badge.component';
 import { ListInvoicesUseCase } from '../../../application/use-cases/invoices/list-invoices.use-case';
 import { CreateInvoiceUseCase } from '../../../application/use-cases/invoices/create-invoice.use-case';
+import { DeleteInvoiceUseCase } from '../../../application/use-cases/invoices/delete-invoice.use-case';
 import { ListSuppliersUseCase } from '../../../application/use-cases/suppliers/list-suppliers.use-case';
 import { Invoice, Currency } from '../../../domain/models/invoice.model';
 import { Supplier } from '../../../domain/models/supplier.model';
@@ -123,6 +124,7 @@ import { isOverdue } from '../../../domain/services/invoice-status.service';
                 <th style="text-align:center;">Issue</th>
                 <th style="text-align:center;">Due</th>
                 <th style="text-align:center;">Status</th>
+                <th style="width:48px;"></th>
               </tr>
             </thead>
             <tbody>
@@ -159,6 +161,23 @@ import { isOverdue } from '../../../domain/services/invoice-status.service';
                   <td style="text-align:center;">
                     <app-status-badge [status]="inv.status" />
                   </td>
+                  <td (click)="$event.stopPropagation(); $event.preventDefault()" style="text-align:center;width:48px;">
+                    @if (deletingId() === inv.id) {
+                      <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+                        <button (click)="confirmDelete(inv.id)"
+                                style="padding:3px 8px;border-radius:4px;border:none;background:var(--red);color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;">Yes</button>
+                        <button (click)="deletingId.set(null)"
+                                style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--text-secondary);font-size:.7rem;cursor:pointer;">No</button>
+                      </div>
+                    } @else {
+                      <button (click)="deletingId.set(inv.id)"
+                              style="width:28px;height:28px;border-radius:4px;border:none;background:none;cursor:pointer;color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;transition:color .15s,background .15s;"
+                              onmouseenter="this.style.color='var(--red)';this.style.background='var(--red-bg)'"
+                              onmouseleave="this.style.color='var(--text-dim)';this.style.background='none'">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                      </button>
+                    }
+                  </td>
                 </tr>
               }
             </tbody>
@@ -171,12 +190,14 @@ import { isOverdue } from '../../../domain/services/invoice-status.service';
 export class InvoicesComponent implements OnInit {
   private listInvoices = inject(ListInvoicesUseCase);
   private createInvoice = inject(CreateInvoiceUseCase);
+  private deleteInvoice = inject(DeleteInvoiceUseCase);
   private listSuppliers = inject(ListSuppliersUseCase);
   private paymentRepo = inject(PaymentRepository);
 
   loading = signal(true);
   saving = signal(false);
   showForm = signal(false);
+  deletingId = signal<string | null>(null);
   invoices = signal<Invoice[]>([]);
   filtered = signal<Invoice[]>([]);
   suppliers = signal<Supplier[]>([]);
@@ -241,6 +262,18 @@ export class InvoicesComponent implements OnInit {
     });
     this.saving.set(false);
     this.showForm.set(false);
+    const [invoices, totals] = await Promise.all([
+      this.listInvoices.execute(),
+      this.paymentRepo.getAllTotals(),
+    ]);
+    this.paymentTotals = totals;
+    this.invoices.set(invoices);
+    this.applyFilter();
+  }
+
+  async confirmDelete(id: string) {
+    await this.deleteInvoice.execute(id);
+    this.deletingId.set(null);
     const [invoices, totals] = await Promise.all([
       this.listInvoices.execute(),
       this.paymentRepo.getAllTotals(),

@@ -33,6 +33,11 @@ export class SupabasePaymentRepository extends PaymentRepository {
     return this.map(data);
   }
 
+  async delete(id: string): Promise<void> {
+    const { error } = await this.db.from('payments').delete().eq('id', id);
+    if (error) throw error;
+  }
+
   async getTotalPaidForInvoice(invoiceId: string): Promise<{ usd: number; lbp: number }> {
     const { data, error } = await this.db
       .from('payments')

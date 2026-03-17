@@ -51,6 +51,11 @@ export class SupabaseInvoiceRepository extends InvoiceRepository {
     return this.map(data);
   }
 
+  async delete(id: string): Promise<void> {
+    const { error } = await this.db.from('invoices').delete().eq('id', id);
+    if (error) throw error;
+  }
+
   async updateStatus(id: string, status: InvoiceStatus): Promise<void> {
     const { error } = await this.db
       .from('invoices')
