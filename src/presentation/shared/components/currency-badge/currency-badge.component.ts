@@ -5,7 +5,8 @@ import { Currency } from '../../../../domain/models/invoice.model';
   selector: 'app-currency-badge',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span class="badge" [class]="currency() === 'USD' ? 'badge-usd' : 'badge-lbp'">{{ currency() }}</span>`,
+  templateUrl: './currency-badge.component.html',
+  styleUrl: './currency-badge.component.scss',
 })
 export class CurrencyBadgeComponent {
   currency = input.required<Currency>();

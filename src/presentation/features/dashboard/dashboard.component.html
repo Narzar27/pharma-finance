@@ -1,0 +1,93 @@
+<app-top-bar title="Dashboard">
+  <a routerLink="/invoices" class="btn-primary">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Invoice
+  </a>
+</app-top-bar>
+
+<div style="padding:28px;">
+
+  <!-- Stat grid -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:28px;">
+
+    <div class="stat-card fade-up fade-up-1">
+      <p class="stat-label">Unpaid — USD</p>
+      <p class="stat-value" style="color:var(--red);">{{ unpaidUsd() | currencyFormat:'USD' }}</p>
+      <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">{{ unpaidUsdCount() }} invoices</p>
+    </div>
+
+    <div class="stat-card fade-up fade-up-2">
+      <p class="stat-label">Unpaid — LBP</p>
+      <p class="stat-value" style="color:var(--red);">{{ unpaidLbp() | currencyFormat:'LBP' }}</p>
+      <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">{{ unpaidLbpCount() }} invoices</p>
+    </div>
+
+    <div class="stat-card fade-up fade-up-3">
+      <p class="stat-label">Income this month — USD</p>
+      <p class="stat-value" style="color:var(--green);">{{ incomeUsd() | currencyFormat:'USD' }}</p>
+    </div>
+
+    <div class="stat-card fade-up fade-up-4">
+      <p class="stat-label">Income this month — LBP</p>
+      <p class="stat-value" style="color:var(--green);">{{ incomeLbp() | currencyFormat:'LBP' }}</p>
+    </div>
+
+    <div class="stat-card fade-up fade-up-5" style="border-color:{{overdueInvoices().length > 0 ? 'var(--red)' : 'var(--border)'}};">
+      <p class="stat-label">Overdue</p>
+      <p class="stat-value" style="color:var(--red);">{{ overdueInvoices().length }}</p>
+      <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">past due date</p>
+    </div>
+
+    <div class="stat-card fade-up fade-up-5" style="border-color:{{dueSoonInvoices().length > 0 ? 'var(--amber)' : 'var(--border)'}};">
+      <p class="stat-label">Due in 7 days</p>
+      <p class="stat-value" style="color:var(--amber);">{{ dueSoonInvoices().length }}</p>
+      <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">upcoming</p>
+    </div>
+
+  </div>
+
+  <!-- Upcoming & overdue table -->
+  @if (upcomingAndOverdue().length > 0) {
+    <div class="table-wrap fade-up fade-up-3">
+      <div style="padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);background:var(--bg-elevated);">
+        <h2 class="section-title">Outstanding Invoices</h2>
+        <a routerLink="/invoices" style="font-size:.75rem;color:var(--gold);text-decoration:none;font-weight:500;">View all →</a>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Supplier</th>
+            <th style="text-align:right;">Amount</th>
+            <th style="text-align:center;">Due Date</th>
+            <th style="text-align:center;">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (inv of upcomingAndOverdue(); track inv.id) {
+            <tr [class]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? 'row-danger' : ''"
+                style="cursor:pointer;" [routerLink]="['/invoices', inv.id]">
+              <td style="font-weight:500;">{{ inv.supplierName }}</td>
+              <td style="text-align:right;">
+                <span class="font-mono" style="font-size:.82rem;">{{ inv.amount | currencyFormat:inv.currency }}</span>
+              </td>
+              <td style="text-align:center;">
+                <span class="font-mono" style="font-size:.78rem;"
+                      [style.color]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? 'var(--red)' : 'var(--amber)'">
+                  {{ inv.dueDate }}
+                </span>
+              </td>
+              <td style="text-align:center;">
+                <app-status-badge [status]="inv.status" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!loading()) {
+    <div style="text-align:center;padding:56px;color:var(--text-dim);">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.4;"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <p style="font-size:.875rem;">All invoices are paid — nothing outstanding!</p>
+    </div>
+  }
+</div>

@@ -1,0 +1,170 @@
+<app-top-bar title="Invoices">
+  <button class="btn-primary" (click)="showForm.set(true)">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    New Invoice
+  </button>
+</app-top-bar>
+
+<div style="padding:28px;">
+
+  <!-- Filters -->
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;">
+    <select class="input" style="width:auto;" [(ngModel)]="filterStatus" (ngModelChange)="applyFilter()">
+      <option value="">All Statuses</option>
+      <option value="unpaid">Unpaid</option>
+      <option value="partial">Partial</option>
+      <option value="paid">Paid</option>
+    </select>
+    <select class="input" style="width:auto;" [(ngModel)]="filterCurrency" (ngModelChange)="applyFilter()">
+      <option value="">All Currencies</option>
+      <option value="USD">USD</option>
+      <option value="LBP">LBP</option>
+    </select>
+    <select class="input" style="width:auto;min-width:160px;" [(ngModel)]="filterSupplier" (ngModelChange)="applyFilter()">
+      <option value="">All Suppliers</option>
+      @for (s of suppliers(); track s.id) {
+        <option [value]="s.id">{{ s.name }}</option>
+      }
+    </select>
+  </div>
+
+  <!-- New Invoice modal -->
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="closeIfBackdrop($event)">
+      <div class="modal fade-up" style="max-width:520px;" (click)="$event.stopPropagation()">
+        <h3 style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--text-primary);margin:0 0 24px;font-weight:400;">New Invoice</h3>
+        <form (ngSubmit)="onSubmit()">
+
+          <div style="margin-bottom:20px;">
+            <label class="label">Supplier *</label>
+            <select class="input" [(ngModel)]="form.supplierId" name="supplierId" required>
+              <option value="">Select supplier...</option>
+              @for (s of suppliers(); track s.id) {
+                <option [value]="s.id">{{ s.name }}</option>
+              }
+            </select>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 120px;gap:14px;margin-bottom:20px;">
+            <div>
+              <label class="label">Amount *</label>
+              <input class="input font-mono" type="number" [(ngModel)]="form.amount" name="amount" required min="0" step="0.01" placeholder="0.00" />
+            </div>
+            <div>
+              <label class="label">Currency</label>
+              <select class="input" [(ngModel)]="form.currency" name="currency">
+                <option value="USD">USD</option>
+                <option value="LBP">LBP</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+            <div>
+              <label class="label">Issue Date *</label>
+              <input class="input font-mono" type="date" [(ngModel)]="form.issueDate" name="issueDate" required />
+            </div>
+            <div>
+              <label class="label">Due Date *</label>
+              <input class="input font-mono" type="date" [(ngModel)]="form.dueDate" name="dueDate" required />
+            </div>
+          </div>
+
+          <div style="margin-bottom:26px;">
+            <label class="label">Notes</label>
+            <input class="input" type="text" [(ngModel)]="form.notes" name="notes" placeholder="Optional" />
+          </div>
+
+          <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border);">
+            <button type="button" class="btn-ghost" (click)="showForm.set(false)">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="saving()">
+              {{ saving() ? 'Saving...' : 'Save Invoice' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Invoice table -->
+  @if (loading()) {
+    <div style="padding:56px;text-align:center;color:var(--text-dim);font-size:.875rem;">Loading invoices...</div>
+  } @else if (filtered().length === 0) {
+    <div style="text-align:center;padding:72px;color:var(--text-dim);">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 14px;display:block;opacity:.35;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <p style="font-size:.875rem;margin:0 0 16px;">No invoices found</p>
+      <button class="btn-primary" (click)="showForm.set(true)">Add your first invoice</button>
+    </div>
+  } @else {
+    <div class="table-wrap fade-up">
+      <table>
+        <thead>
+          <tr>
+            <th>Supplier</th>
+            <th style="text-align:right;">Amount</th>
+            <th style="text-align:right;">Remaining</th>
+            <th style="text-align:center;">Cur.</th>
+            <th style="text-align:center;">Issue</th>
+            <th style="text-align:center;">Due</th>
+            <th style="text-align:center;">Status</th>
+            <th style="width:48px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (inv of filtered(); track inv.id) {
+            <tr [class]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? 'row-danger' : ''"
+                style="cursor:pointer;" [routerLink]="['/invoices', inv.id]">
+              <td style="font-weight:500;">{{ inv.supplierName }}</td>
+              <td style="text-align:right;">
+                <span class="font-mono" style="font-size:.82rem;">{{ inv.amount | currencyFormat:inv.currency }}</span>
+              </td>
+              <td style="text-align:right;">
+                @if (inv.status === 'partial') {
+                  <span class="font-mono" style="font-size:.82rem;color:var(--amber);">
+                    {{ remaining(inv) | currencyFormat:inv.currency }}
+                  </span>
+                } @else if (inv.status === 'paid') {
+                  <span style="font-size:.78rem;color:var(--green);">Paid</span>
+                } @else {
+                  <span class="font-mono" style="font-size:.82rem;color:var(--text-dim);">{{ inv.amount | currencyFormat:inv.currency }}</span>
+                }
+              </td>
+              <td style="text-align:center;">
+                <app-currency-badge [currency]="inv.currency" />
+              </td>
+              <td style="text-align:center;">
+                <span class="font-mono" style="font-size:.78rem;color:var(--text-secondary);">{{ inv.issueDate }}</span>
+              </td>
+              <td style="text-align:center;">
+                <span class="font-mono" style="font-size:.78rem;"
+                      [style.color]="isOverdue(inv.dueDate) && inv.status !== 'paid' ? 'var(--red)' : 'var(--text-secondary)'">
+                  {{ inv.dueDate }}
+                </span>
+              </td>
+              <td style="text-align:center;">
+                <app-status-badge [status]="inv.status" />
+              </td>
+              <td (click)="$event.stopPropagation(); $event.preventDefault()" style="text-align:center;width:48px;">
+                @if (deletingId() === inv.id) {
+                  <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
+                    <button (click)="confirmDelete(inv.id)"
+                            style="padding:3px 8px;border-radius:4px;border:none;background:var(--red);color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;">Yes</button>
+                    <button (click)="deletingId.set(null)"
+                            style="padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--text-secondary);font-size:.7rem;cursor:pointer;">No</button>
+                  </div>
+                } @else {
+                  <button (click)="deletingId.set(inv.id)"
+                          style="width:28px;height:28px;border-radius:4px;border:none;background:none;cursor:pointer;color:var(--text-dim);display:inline-flex;align-items:center;justify-content:center;transition:color .15s,background .15s;"
+                          onmouseenter="this.style.color='var(--red)';this.style.background='var(--red-bg)'"
+                          onmouseleave="this.style.color='var(--text-dim)';this.style.background='none'">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                  </button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

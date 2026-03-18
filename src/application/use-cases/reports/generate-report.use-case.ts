@@ -33,14 +33,14 @@ export class GenerateReportUseCase {
   private supplierRepo = inject(SupplierRepository);
 
   async execute(range: DateRange): Promise<ReportResult> {
-    const [incomeTotals, invoices, suppliers] = await Promise.all([
+    const [recordTotals, invoices, suppliers] = await Promise.all([
       this.incomeRepo.getTotals(range.from, range.to),
       this.invoiceRepo.getAll({ dateFrom: range.from, dateTo: range.to }),
       this.supplierRepo.getAll(),
     ]);
 
-    // Expenses = all invoices (regardless of payment status) in the period
-    const totalExpenses = invoices.reduce(
+    // Invoice expenses in the period
+    const invoiceExpenses = invoices.reduce(
       (acc, inv) => {
         if (inv.currency === 'USD') acc.usd += inv.amount;
         else acc.lbp += inv.amount;
@@ -49,9 +49,17 @@ export class GenerateReportUseCase {
       { usd: 0, lbp: 0 }
     );
 
+    // Total expenses = invoice expenses + cash expense records
+    const totalExpenses: CurrencySplit = {
+      usd: invoiceExpenses.usd + recordTotals.expense.usd,
+      lbp: invoiceExpenses.lbp + recordTotals.expense.lbp,
+    };
+
+    const totalIncome = recordTotals.income;
+
     const netBalance: CurrencySplit = {
-      usd: incomeTotals.usd - totalExpenses.usd,
-      lbp: incomeTotals.lbp - totalExpenses.lbp,
+      usd: totalIncome.usd - totalExpenses.usd,
+      lbp: totalIncome.lbp - totalExpenses.lbp,
     };
 
     // Per-supplier unpaid balances
@@ -79,7 +87,7 @@ export class GenerateReportUseCase {
     );
 
     return {
-      totalIncome: incomeTotals,
+      totalIncome,
       totalExpenses,
       netBalance,
       supplierBalances: supplierBalances.filter(

@@ -1,0 +1,15 @@
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.row-grid {
+  display: grid;
+  grid-template-columns: 90px 110px 1fr 68px 1fr 36px;
+  gap: 8px;
+}
+
+@media (max-width: 600px) {
+  .row-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .row-grid > *:nth-child(5) { grid-column: 1 / -1; }
+  .row-grid > *:nth-child(6) { grid-column: 1 / -1; justify-self: end; }
+}

@@ -1,0 +1,82 @@
+<nav class="sidebar" [class.is-open]="menu.isOpen()" style="
+  width:220px; height:100vh;
+  background:var(--bg-surface);
+  border-right:1px solid var(--border);
+  display:flex; flex-direction:column;
+  position:fixed; left:0; top:0; z-index:50;
+  transition:background .25s, border-color .25s;
+  overflow-y:auto;
+">
+  <!-- Mobile close button -->
+  <button class="mobile-close-btn" (click)="menu.close()"
+          style="display:none;position:absolute;top:14px;right:14px;width:32px;height:32px;border-radius:var(--radius-sm);background:var(--bg-hover);border:1px solid var(--border);cursor:pointer;color:var(--text-secondary);align-items:center;justify-content:center;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+
+  <!-- Brand -->
+  <div style="padding:22px 20px 18px; border-bottom:1px solid var(--border);">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--gold),var(--gold-dark));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 2px 8px var(--gold-glow);">
+        <!-- Pill icon -->
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#08111a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.5 21a7.5 7.5 0 0 1 0-18h3a7.5 7.5 0 0 1 0 18h-3z"/>
+          <line x1="12" y1="3" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <div>
+        <p style="font-family:'DM Serif Display',serif;font-size:.95rem;color:var(--text-primary);margin:0;line-height:1.2;">Pharma Finance</p>
+        <p style="font-size:.68rem;color:var(--text-dim);margin:0;letter-spacing:.06em;text-transform:uppercase;">Ledger System</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div style="padding:12px 10px;flex:1;overflow-y:auto;">
+    <p style="font-size:.62rem;font-weight:600;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;padding:0 10px;margin:0 0 6px;">Menu</p>
+    @for (item of navItems; track item.path) {
+      <a [routerLink]="item.path"
+         routerLinkActive="active-link"
+         [routerLinkActiveOptions]="{exact: item.exact ?? false}"
+         (click)="menu.close()"
+         class="nav-link"
+         style="
+           display:flex;align-items:center;gap:10px;
+           padding:9px 12px;border-radius:var(--radius-sm);margin-bottom:2px;
+           text-decoration:none;color:var(--text-secondary);
+           font-size:.82rem;font-weight:500;
+           transition:background .15s, color .15s;
+         ">
+        <span style="width:18px;height:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;" [innerHTML]="item.icon"></span>
+        {{ item.label }}
+      </a>
+    }
+  </div>
+
+  <!-- Bottom controls -->
+  <div style="padding:12px 10px;border-top:1px solid var(--border);">
+    <!-- Theme toggle -->
+    <button (click)="theme.toggle()"
+            style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:var(--radius-sm);background:none;border:none;cursor:pointer;color:var(--text-secondary);font-size:.82rem;font-weight:500;font-family:'Outfit',sans-serif;transition:background .15s,color .15s;margin-bottom:2px;"
+            (mouseenter)="$any($event.currentTarget).style.background='var(--bg-hover)'"
+            (mouseleave)="$any($event.currentTarget).style.background='none'">
+      @if (theme.theme() === 'dark') {
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+        Light Mode
+      } @else {
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        Dark Mode
+      }
+    </button>
+
+    <!-- Sign out -->
+    <button (click)="signOut.emit()"
+            style="display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:var(--radius-sm);background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:.82rem;font-weight:500;font-family:'Outfit',sans-serif;transition:background .15s,color .15s;"
+            (mouseenter)="$any($event.currentTarget).style.cssText+='background:var(--red-bg)!important;color:var(--red)!important;'"
+            (mouseleave)="$any($event.currentTarget).style.cssText='display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border-radius:var(--radius-sm);background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:.82rem;font-weight:500;font-family:Outfit,sans-serif;transition:background .15s,color .15s;'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+      Sign Out
+    </button>
+  </div>
+</nav>

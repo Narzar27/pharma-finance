@@ -28,6 +28,7 @@ export class SupabaseIncomeRecordRepository extends IncomeRecordRepository {
         amount: dto.amount,
         currency: dto.currency,
         date: dto.date,
+        type: dto.type ?? 'income',
         source: dto.source,
         notes: dto.notes,
       })
@@ -42,22 +43,24 @@ export class SupabaseIncomeRecordRepository extends IncomeRecordRepository {
     if (error) throw error;
   }
 
-  async getTotals(dateFrom?: string, dateTo?: string): Promise<{ usd: number; lbp: number }> {
-    let query = this.db.from('income_records').select('amount, currency');
+  async getTotals(dateFrom?: string, dateTo?: string): Promise<{
+    income: { usd: number; lbp: number };
+    expense: { usd: number; lbp: number };
+  }> {
+    let query = this.db.from('income_records').select('amount, currency, type');
     if (dateFrom) query = query.gte('date', dateFrom);
     if (dateTo) query = query.lte('date', dateTo);
 
     const { data, error } = await query;
     if (error) throw error;
 
-    return (data ?? []).reduce(
-      (acc, row) => {
-        if (row.currency === 'USD') acc.usd += Number(row.amount);
-        else acc.lbp += Number(row.amount);
-        return acc;
-      },
-      { usd: 0, lbp: 0 }
-    );
+    const result = { income: { usd: 0, lbp: 0 }, expense: { usd: 0, lbp: 0 } };
+    for (const row of data ?? []) {
+      const bucket = row.type === 'expense' ? result.expense : result.income;
+      if (row.currency === 'USD') bucket.usd += Number(row.amount);
+      else bucket.lbp += Number(row.amount);
+    }
+    return result;
   }
 
   private map(row: any): IncomeRecord {
@@ -66,6 +69,7 @@ export class SupabaseIncomeRecordRepository extends IncomeRecordRepository {
       amount: Number(row.amount),
       currency: row.currency,
       date: row.date,
+      type: row.type ?? 'income',
       source: row.source,
       notes: row.notes,
       createdAt: row.created_at,

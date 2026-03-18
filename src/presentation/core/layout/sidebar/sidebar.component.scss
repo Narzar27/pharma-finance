@@ -1,0 +1,13 @@
+.active-link {
+  background: var(--gold-bg) !important;
+  color: var(--gold) !important;
+  box-shadow: inset 3px 0 0 var(--gold);
+}
+.active-link svg { stroke: var(--gold) !important; }
+.nav-link:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+@media (max-width: 767px) {
+  .mobile-close-btn { display: flex !important; }
+}

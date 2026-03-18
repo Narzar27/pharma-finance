@@ -1,0 +1,7 @@
+<div style="display:flex; min-height:100vh;">
+  <div class="mobile-overlay" [class.is-open]="menu.isOpen()" (click)="menu.close()"></div>
+  <app-sidebar (signOut)="onSignOut()" />
+  <main style="flex:1; margin-left:220px; min-height:100vh; background:var(--bg-base); overflow-y:auto; transition:background .25s;">
+    <router-outlet />
+  </main>
+</div>

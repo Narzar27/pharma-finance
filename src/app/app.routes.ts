@@ -42,7 +42,7 @@ export const routes: Routes = [
       {
         path: 'invoices/:id',
         loadComponent: () =>
-          import('../presentation/features/invoices/invoice-detail.component').then(
+          import('../presentation/features/invoices/details/invoice-detail.component').then(
             (m) => m.InvoiceDetailComponent
           ),
       },

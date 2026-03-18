@@ -10,15 +10,8 @@ import { MenuService } from '../menu/menu.service';
   standalone: true,
   imports: [RouterOutlet, SidebarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `
-    <div style="display:flex; min-height:100vh;">
-      <div class="mobile-overlay" [class.is-open]="menu.isOpen()" (click)="menu.close()"></div>
-      <app-sidebar (signOut)="onSignOut()" />
-      <main style="flex:1; margin-left:220px; min-height:100vh; background:var(--bg-base); overflow-y:auto; transition:background .25s;">
-        <router-outlet />
-      </main>
-    </div>
-  `,
+  templateUrl: './app-shell.component.html',
+  styleUrl: './app-shell.component.scss',
 })
 export class AppShellComponent {
   private auth = inject(AuthService);

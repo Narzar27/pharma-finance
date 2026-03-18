@@ -5,7 +5,8 @@ import { InvoiceStatus } from '../../../../domain/models/invoice.model';
   selector: 'app-status-badge',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span class="badge" [class]="'badge-' + status()">{{ labels[status()] }}</span>`,
+  templateUrl: './status-badge.component.html',
+  styleUrl: './status-badge.component.scss',
 })
 export class StatusBadgeComponent {
   status = input.required<InvoiceStatus>();
