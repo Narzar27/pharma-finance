@@ -33,9 +33,10 @@ Deno.serve(async (req) => {
       .from('tenant_members')
       .select('id, email, tenant_id')
       .eq('id', memberId)
+      .eq('status', 'invited')
       .single();
     if (memberError || !member) {
-      return new Response(JSON.stringify({ ok: false, error: 'Teammate request not found.' }), { status: 404 });
+      return new Response(JSON.stringify({ ok: false, error: 'Teammate request not found or not in an invitable state.' }), { status: 404 });
     }
 
     const { error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(member.email, {
