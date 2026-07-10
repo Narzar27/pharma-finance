@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import { Session, User } from '@supabase/supabase-js';
 import { getSupabaseClient } from '../../../infrastructure/supabase/supabase.client';
+import { environment } from '../../../environments/environment';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -15,6 +16,13 @@ export class AuthService {
   });
 
   constructor() {
+    // TEMPORARY: Supabase project is down, skip the network-dependent session
+    // restore entirely. Remove once environment.bypassAuth is false again.
+    if (environment.bypassAuth) {
+      this._sessionReadyResolve();
+      return;
+    }
+
     // Restore session on init (also handles OAuth redirect tokens in the URL)
     this.db.auth.getSession().then(({ data }) => {
       this.session.set(data.session);
@@ -45,6 +53,6 @@ export class AuthService {
   }
 
   isAuthenticated(): boolean {
-    return this.session() !== null;
+    return environment.bypassAuth || this.session() !== null;
   }
 }
