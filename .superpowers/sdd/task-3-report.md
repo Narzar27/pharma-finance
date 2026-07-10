@@ -346,3 +346,144 @@ Everything else specified (the 4 policy rewrites, the 4 helper functions,
 `request_add_teammate` rewrite) is deployed and verified working correctly
 under real simulated authenticated sessions, with no regressions to
 `claim_invited_membership` or any other policy.
+
+---
+
+## Fix pass (create_tenant_signup RETURNING bug)
+
+### What was implemented
+
+Created `supabase/migrations/20260710173824_fix_create_tenant_signup_returning_bug.sql`
+(applied as `fix_create_tenant_signup_returning_bug`, recorded version
+`20260710173824` — file renamed from a placeholder timestamp to match, same
+process as every prior task) containing a single `create or replace function
+public.create_tenant_signup(...)`.
+
+**Root cause** (identified during the previous fix pass, left as an open
+issue): the function's first statement, `insert into public.tenants (name,
+status) values (p_business_name, 'pending') returning id into v_tenant_id`,
+fails with `42501: insufficient privilege` for any real authenticated
+caller. Postgres enforces the table's SELECT-visibility RLS policy
+(`tenants_member_select`, `using (public.is_tenant_member(id))`) on the row
+produced by an `INSERT ... RETURNING`, not just the `WITH CHECK` policy for
+the insert itself. At that point in the function, no `tenant_members` row
+yet exists linking the caller to the brand-new tenant (that only happens in
+the *next* statement), so `is_tenant_member(id)` evaluates false and the
+`RETURNING` is rejected — even though the `INSERT` itself would have been
+allowed by `tenants_self_signup_insert`'s `with check (status = 'pending')`.
+
+**Fix:** generate the tenant's UUID client-side inside the function
+(`v_tenant_id uuid := gen_random_uuid();`) instead of relying on the
+column's `gen_random_uuid()` default + `RETURNING` to learn it, so the
+`tenants` insert no longer needs a `RETURNING` clause at all:
+```sql
+insert into public.tenants (id, name, status) values (v_tenant_id, p_business_name, 'pending');
+```
+The function remains `security invoker` (least-privilege, unchanged from
+the original design) — the problem was the unnecessary `RETURNING`, not an
+authorization gap. The `tenant_members` insert is untouched and still uses
+`returning * into v_member`, since `tenant_members_self_select`'s policy
+(`using (user_id = auth.uid() or email = auth.jwt() ->> 'email')`) grants
+the caller immediate visibility into their own new row with no membership
+precondition.
+
+### Applying and renaming
+
+- `mcp__plugin_supabase_supabase__apply_migration` (project_id
+  `sixtdsvrohktvwceqvvg`, name `fix_create_tenant_signup_returning_bug`) →
+  `{"success":true}`
+- `mcp__plugin_supabase_supabase__list_migrations` → recorded as
+  `{"version":"20260710173824","name":"fix_create_tenant_signup_returning_bug"}`.
+  Renamed the local file from `20260710171011_fix_create_tenant_signup_returning_bug.sql`
+  (a placeholder timestamp reused from the file it patches) to
+  `20260710173824_fix_create_tenant_signup_returning_bug.sql` to match.
+
+### Simulated-session verification
+
+All tests ran as `set local role authenticated;` plus `select
+set_config('request.jwt.claims', ..., true);` inside `begin; ... rollback;`
+blocks — never the SQL editor's superuser context, exactly the mistake that
+let the original bug through. A fake `auth.users` row was inserted first
+(inside the same transaction) so the `tenant_members.user_id` foreign key
+would resolve, matching the pattern used in the previous fix pass's
+verification.
+
+**1. First attempt without a real `auth.users` row — correctly rejected for
+an unrelated reason, confirming the FK is still enforced:**
+```
+ERROR: 23503: insert or update on table "tenant_members" violates foreign key constraint "tenant_members_user_id_fkey"
+DETAIL:  Key is not present in table "users".
+```
+(Expected — `auth.uid()` pointed at a nonexistent user. Not the bug under
+test; fixed by inserting a real `auth.users` row in the next attempt.)
+
+**2. Single simulated signup, with a real `auth.users` row:**
+```sql
+begin;
+insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values ('a1a1a1a1-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fresh-test-signup@example.com', '', now(), '{}', '{}', now(), now());
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', 'a1a1a1a1-1111-1111-1111-111111111111', 'email', 'fresh-test-signup@example.com', 'role', 'authenticated')::text, true);
+select * from create_tenant_signup('Test Business', 'Test', 'User', '1990-01-01'::date);
+rollback;
+```
+Result:
+```json
+[{"id":"e53801f9-5dbd-4884-b050-73f31d5af645","tenant_id":"27705c83-23bb-4687-bc09-5c25214eb6a1","user_id":"a1a1a1a1-1111-1111-1111-111111111111","email":"fresh-test-signup@example.com","first_name":"Test","last_name":"User","dob":"1990-01-01","role":"owner","status":"pending","invited_by":null,"created_at":"2026-07-10 17:38:47.424815+00","decided_at":null,"decided_by":null}]
+```
+No `42501`, no `42P17`. `status: pending`, `role: owner`, `tenant_id` is a
+freshly generated UUID — exactly the expected shape.
+
+**3. Regression check — two different simulated users each signing up
+independently in the same transaction, to confirm no front-running/TOCTOU
+reintroduction (the `tenant_has_any_member` guard is per-tenant, not
+global):**
+```sql
+begin;
+insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
+values
+  ('a1a1a1a1-1111-1111-1111-111111111111', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fresh-test-signup-1@example.com', '', now(), '{}', '{}', now(), now()),
+  ('b2b2b2b2-2222-2222-2222-222222222222', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', 'fresh-test-signup-2@example.com', '', now(), '{}', '{}', now(), now());
+
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', 'a1a1a1a1-1111-1111-1111-111111111111', 'email', 'fresh-test-signup-1@example.com', 'role', 'authenticated')::text, true);
+select * from create_tenant_signup('Test Business One', 'Test', 'UserOne', '1990-01-01'::date);
+
+select set_config('request.jwt.claims', json_build_object('sub', 'b2b2b2b2-2222-2222-2222-222222222222', 'email', 'fresh-test-signup-2@example.com', 'role', 'authenticated')::text, true);
+select * from create_tenant_signup('Test Business Two', 'Test', 'UserTwo', '1991-02-02'::date);
+
+reset role;
+select tenant_id, email, role, status from public.tenant_members where email in ('fresh-test-signup-1@example.com','fresh-test-signup-2@example.com') order by email;
+rollback;
+```
+Result:
+```json
+[{"tenant_id":"91e30b8d-bc12-49f6-bf10-856eb9c87b06","email":"fresh-test-signup-1@example.com","role":"owner","status":"pending"},
+ {"tenant_id":"e03c3653-a0de-47ce-a2b5-bf6f09f7bf08","email":"fresh-test-signup-2@example.com","role":"owner","status":"pending"}]
+```
+Both signups succeeded independently, with two distinct freshly generated
+`tenant_id`s and no error — confirms the fix did not reintroduce the
+front-running/TOCTOU issue from Task 2, since each user's `INSERT` targets
+a UUID it generated itself (no collision risk) and each `tenant_members`
+insert is evaluated against its own new tenant only.
+
+**4. No residue after rollback:**
+```sql
+select
+  (select count(*) from public.tenants) as tenants_count,
+  (select count(*) from public.tenant_members) as members_count,
+  (select count(*) from auth.users where email like 'fresh-test-signup%') as test_users_count;
+```
+Result: `{"tenants_count":1,"members_count":2,"test_users_count":0}` —
+matches the exact pre-existing baseline from the previous fix pass's
+verification, confirming every test transaction was cleanly rolled back and
+no test data (or test `auth.users` rows) leaked into the live project.
+
+### Issues / concerns
+
+None. The `RETURNING`-on-`INSERT` bug is fixed, verified end-to-end under a
+real simulated authenticated session (not the superuser SQL editor context
+that let it through originally), and a two-independent-users regression
+check confirms no reintroduction of the front-running issue from earlier
+tasks. `create_tenant_signup` remains `security invoker`, unchanged in
+privilege level from the original design.
