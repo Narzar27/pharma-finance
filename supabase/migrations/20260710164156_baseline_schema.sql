@@ -13,7 +13,7 @@ create table if not exists public.suppliers (
 
 create table if not exists public.invoices (
   id uuid primary key default gen_random_uuid(),
-  supplier_id uuid references public.suppliers(id),
+  supplier_id uuid references public.suppliers(id) on delete restrict,
   amount numeric not null,
   currency text not null check (currency = any (array['USD'::text, 'LBP'::text])),
   issue_date date not null,
@@ -25,7 +25,7 @@ create table if not exists public.invoices (
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
-  invoice_id uuid references public.invoices(id),
+  invoice_id uuid references public.invoices(id) on delete cascade,
   amount_paid numeric not null,
   currency text not null check (currency = any (array['USD'::text, 'LBP'::text])),
   payment_date date not null,
