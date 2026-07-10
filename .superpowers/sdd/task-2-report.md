@@ -124,3 +124,32 @@ Addressed self-review findings #1 (`tenant_members_claim_invited` column-scope g
 
 - Task 3 must still add the `SECURITY DEFINER` claim-invite function; until then there is no client-side path at all for an invitee to activate an `invited` row (a temporary functionality gap, not a security one — matches self-review finding #2, the `pending`→`invited` transition is also not yet reachable via any policy).
 - No other consumers of `tenant_members_claim_invited` were found in the Angular codebase (Task 3/4 not yet built), so removing it has no blast radius on existing application code.
+
+## Fix pass (TOCTOU race)
+
+The `NOT EXISTS` guard added in the RLS gaps fix relies solely on a `WITH CHECK` predicate with no backing unique constraint. Under Postgres's default READ COMMITTED isolation, two concurrent INSERT transactions targeting the same new `tenant_id` could each evaluate `NOT EXISTS` against a snapshot that doesn't see the other's uncommitted row, so both could pass and both land as `role='owner', status='pending'` for the same tenant, reopening the "two owners get activated together" scenario.
+
+**Fix:** added a unique partial index on `(tenant_id) where role = 'owner'`, making the guarantee atomic at the constraint level. At most one `role='owner'` row can now exist per `tenant_id` regardless of status — so even under a race, only one of the two concurrent inserts can win; the other fails with a unique-violation error.
+
+### MCP tool calls and results
+
+1. **`apply_migration`** (`project_id: sixtdsvrohktvwceqvvg`, `name: add_one_owner_per_tenant_constraint`, SQL: `create unique index if not exists tenant_members_one_owner_per_tenant on public.tenant_members(tenant_id) where role = 'owner';`) → `{"success": true}`.
+2. **`list_migrations`** → Supabase stamped version `20260710170532`; local file renamed from placeholder `20260710170000` to match.
+3. **`execute_sql`** (verification):
+   ```sql
+   select indexname, indexdef from pg_indexes where tablename = 'tenant_members' and indexname = 'tenant_members_one_owner_per_tenant';
+   ```
+   Result (1 row):
+   ```
+   indexname: tenant_members_one_owner_per_tenant
+   indexdef: CREATE UNIQUE INDEX tenant_members_one_owner_per_tenant ON public.tenant_members USING btree (tenant_id) WHERE (role = 'owner'::text)
+   ```
+   — confirms the unique partial index is live and correctly typed.
+
+### Files changed
+
+- `supabase/migrations/20260710170532_add_one_owner_per_tenant_constraint.sql` (new)
+
+### Issues or concerns
+
+- None. The index ensures atomicity at the constraint level and is orthogonal to the RLS policy logic (both can coexist — the policy gates who can insert, the index gates how many owners per tenant can exist).
