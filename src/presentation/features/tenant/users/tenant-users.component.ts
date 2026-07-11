@@ -4,8 +4,11 @@ import { TopBarComponent } from '../../../core/layout/top-bar/top-bar.component'
 import { CurrentTenantService } from '../../../core/tenant/current-tenant.service';
 import { ListTeamMembersUseCase } from '../../../../application/use-cases/tenants/list-team-members.use-case';
 import { RequestAddTeammateUseCase } from '../../../../application/use-cases/tenants/request-add-teammate.use-case';
+import { GetTenantUseCase } from '../../../../application/use-cases/tenants/get-tenant.use-case';
+import { RenameTenantUseCase } from '../../../../application/use-cases/tenants/rename-tenant.use-case';
 import { canManageTeam } from '../../../../domain/services/membership-access.service';
 import { TenantMember, MemberRole } from '../../../../domain/models/tenant-member.model';
+import { Tenant } from '../../../../domain/models/tenant.model';
 
 @Component({
   selector: 'app-tenant-users',
@@ -17,6 +20,8 @@ import { TenantMember, MemberRole } from '../../../../domain/models/tenant-membe
 export class TenantUsersComponent implements OnInit {
   private listTeam = inject(ListTeamMembersUseCase);
   private requestAddTeammate = inject(RequestAddTeammateUseCase);
+  private getTenant = inject(GetTenantUseCase);
+  private renameTenant = inject(RenameTenantUseCase);
   tenant = inject(CurrentTenantService);
 
   loading = signal(true);
@@ -24,6 +29,12 @@ export class TenantUsersComponent implements OnInit {
   showForm = signal(false);
   error = signal('');
   members = signal<TenantMember[]>([]);
+
+  business = signal<Tenant | null>(null);
+  editingName = signal(false);
+  nameDraft = '';
+  renaming = signal(false);
+  renameError = signal('');
 
   canManage = computed(() => {
     const role = this.tenant.membership()?.role;
@@ -34,8 +45,42 @@ export class TenantUsersComponent implements OnInit {
 
   async ngOnInit() {
     const tenantId = this.tenant.membership()?.tenantId;
-    if (tenantId) this.members.set(await this.listTeam.execute(tenantId));
+    if (tenantId) {
+      const [members, business] = await Promise.all([
+        this.listTeam.execute(tenantId),
+        this.getTenant.execute(tenantId),
+      ]);
+      this.members.set(members);
+      this.business.set(business);
+    }
     this.loading.set(false);
+  }
+
+  startEditName() {
+    this.nameDraft = this.business()?.name ?? '';
+    this.renameError.set('');
+    this.editingName.set(true);
+  }
+
+  cancelEditName() {
+    this.editingName.set(false);
+    this.renameError.set('');
+  }
+
+  async saveName() {
+    const tenantId = this.tenant.membership()?.tenantId;
+    if (!tenantId || !this.nameDraft.trim()) return;
+    this.renaming.set(true);
+    this.renameError.set('');
+    try {
+      const updated = await this.renameTenant.execute(tenantId, this.nameDraft);
+      this.business.set(updated);
+      this.editingName.set(false);
+    } catch (e: any) {
+      this.renameError.set(e?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      this.renaming.set(false);
+    }
   }
 
   async onSubmit() {

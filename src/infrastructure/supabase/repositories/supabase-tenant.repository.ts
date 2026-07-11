@@ -13,6 +13,12 @@ export class SupabaseTenantRepository extends TenantRepository {
     return this.map(data);
   }
 
+  async rename(id: string, name: string): Promise<Tenant> {
+    const { data, error } = await this.db.rpc('rename_tenant', { p_tenant_id: id, p_name: name });
+    if (error) throw error;
+    return this.map(data);
+  }
+
   private map(row: any): Tenant {
     return { id: row.id, name: row.name, status: row.status, createdAt: row.created_at };
   }
