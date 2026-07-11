@@ -1,0 +1,55 @@
+<div style="min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg-base); padding:40px 20px;">
+  <div style="width:100%; max-width:420px;" class="fade-up">
+    <div style="margin-bottom:28px;">
+      <h1 style="font-family:'DM Serif Display',serif;font-size:1.7rem;color:var(--text-primary);margin:0 0 6px;font-weight:400;">Set up your business</h1>
+      <p style="font-size:.82rem;color:var(--text-secondary);margin:0;">Your account will be reviewed before you can sign in.</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()">
+      <div style="margin-bottom:16px;">
+        <label class="label" for="businessName">Business name</label>
+        <input id="businessName" class="input" type="text" name="businessName" [(ngModel)]="businessName" required />
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+        <div>
+          <label class="label" for="firstName">First name</label>
+          <input id="firstName" class="input" type="text" name="firstName" [(ngModel)]="firstName" required />
+        </div>
+        <div>
+          <label class="label" for="lastName">Last name</label>
+          <input id="lastName" class="input" type="text" name="lastName" [(ngModel)]="lastName" required />
+        </div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label class="label" for="dob">Date of birth</label>
+        <input id="dob" class="input font-mono" type="date" name="dob" [(ngModel)]="dob" required />
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label class="label" for="email">Email address</label>
+        <input id="email" class="input" type="email" name="email" [(ngModel)]="email" required autocomplete="email" />
+      </div>
+
+      <div style="margin-bottom:22px;">
+        <label class="label" for="password">Password</label>
+        <input id="password" class="input" type="password" name="password" [(ngModel)]="password" required autocomplete="new-password" />
+      </div>
+
+      @if (error()) {
+        <div style="background:var(--red-bg);border:1px solid rgba(231,76,60,.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:18px;">
+          <p style="font-size:.8rem;color:var(--red);margin:0;">{{ error() }}</p>
+        </div>
+      }
+
+      <button type="submit" class="btn-primary" [disabled]="loading()" style="width:100%;justify-content:center;padding:11px 18px;font-size:.875rem;">
+        {{ loading() ? 'Creating your account...' : 'Create business account' }}
+      </button>
+    </form>
+
+    <p style="text-align:center;font-size:.8rem;color:var(--text-secondary);margin-top:20px;">
+      Already have an account? <a routerLink="/login" style="color:var(--gold);text-decoration:none;">Log in</a>
+    </p>
+  </div>
+</div>

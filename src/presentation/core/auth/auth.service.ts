@@ -41,6 +41,10 @@ export class AuthService {
     return this.db.auth.signInWithPassword({ email, password });
   }
 
+  signUp(email: string, password: string) {
+    return this.db.auth.signUp({ email, password });
+  }
+
   signInWithGoogle() {
     return this.db.auth.signInWithOAuth({
       provider: 'google',
