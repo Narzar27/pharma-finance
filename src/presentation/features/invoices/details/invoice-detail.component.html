@@ -105,6 +105,18 @@
               <input class="input font-mono" type="date" [(ngModel)]="payForm.paymentDate" name="payDate" required />
             </div>
           </div>
+          @if (isCrossCurrency()) {
+            <div style="margin-bottom:12px;padding:12px;background:var(--gold-bg);border:1px solid rgba(212,168,83,.25);border-radius:var(--radius-sm);">
+              <label class="label">
+                Exchange rate — 1 {{ payForm.currency }} = ? {{ detail()!.invoice.currency }} *
+              </label>
+              <input class="input font-mono" type="number" [(ngModel)]="payForm.exchangeRate" name="payExchangeRate" required min="0" step="any"
+                     [placeholder]="payForm.currency === 'USD' ? 'e.g. 89000' : 'e.g. 0.0000112'" />
+              <p style="font-size:.72rem;color:var(--text-secondary);margin:6px 0 0;">
+                This invoice is in {{ detail()!.invoice.currency }} — paying in {{ payForm.currency }} needs the rate used for this payment to count correctly toward it.
+              </p>
+            </div>
+          }
           <div style="display:flex;gap:10px;align-items:center;">
             <input class="input" style="flex:1;" type="text" [(ngModel)]="payForm.notes" name="payNotes" placeholder="Notes (optional)" />
             <button type="submit" class="btn-primary" [disabled]="addingPayment()" style="white-space:nowrap;">
@@ -134,7 +146,12 @@
             @for (p of detail()!.payments; track p.id) {
               <tr>
                 <td><span class="font-mono" style="font-size:.8rem;color:var(--text-secondary);">{{ p.paymentDate }}</span></td>
-                <td style="text-align:right;"><span class="font-mono" style="font-size:.82rem;color:var(--green);">{{ p.amountPaid | currencyFormat:p.currency }}</span></td>
+                <td style="text-align:right;">
+                  <span class="font-mono" style="font-size:.82rem;color:var(--green);">{{ p.amountPaid | currencyFormat:p.currency }}</span>
+                  @if (p.exchangeRate) {
+                    <div style="font-size:.68rem;color:var(--text-dim);">@ {{ p.exchangeRate }}</div>
+                  }
+                </td>
                 <td style="font-size:.8rem;color:var(--text-dim);">{{ p.notes ?? '—' }}</td>
                 <td style="text-align:center;width:48px;">
                   @if (deletingPaymentId() === p.id) {

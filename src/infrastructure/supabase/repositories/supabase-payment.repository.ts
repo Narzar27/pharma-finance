@@ -27,6 +27,7 @@ export class SupabasePaymentRepository extends PaymentRepository {
         amount_paid: dto.amountPaid,
         currency: dto.currency,
         payment_date: dto.paymentDate,
+        exchange_rate: dto.exchangeRate ?? null,
         notes: dto.notes,
       })
       .select()
@@ -92,6 +93,7 @@ export class SupabasePaymentRepository extends PaymentRepository {
       amountPaid: Number(row.amount_paid),
       currency: row.currency,
       paymentDate: row.payment_date,
+      exchangeRate: row.exchange_rate != null ? Number(row.exchange_rate) : undefined,
       notes: row.notes,
       createdAt: row.created_at,
     };

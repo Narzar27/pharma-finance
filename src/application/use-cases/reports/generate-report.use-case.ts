@@ -33,28 +33,17 @@ export class GenerateReportUseCase {
   private supplierRepo = inject(SupplierRepository);
 
   async execute(range: DateRange): Promise<ReportResult> {
-    const [recordTotals, invoices, suppliers] = await Promise.all([
+    const [recordTotals, suppliers] = await Promise.all([
       this.incomeRepo.getTotals(range.from, range.to),
-      this.invoiceRepo.getAll({ dateFrom: range.from, dateTo: range.to }),
       this.supplierRepo.getAll(),
     ]);
 
-    // Invoice expenses in the period
-    const invoiceExpenses = invoices.reduce(
-      (acc, inv) => {
-        if (inv.currency === 'USD') acc.usd += inv.amount;
-        else acc.lbp += inv.amount;
-        return acc;
-      },
-      { usd: 0, lbp: 0 }
-    );
-
-    // Total expenses = invoice expenses + cash expense records
-    const totalExpenses: CurrencySplit = {
-      usd: invoiceExpenses.usd + recordTotals.expense.usd,
-      lbp: invoiceExpenses.lbp + recordTotals.expense.lbp,
-    };
-
+    // Expenses are cash-basis: every income_records row of type 'expense',
+    // which now includes invoice payments (recorded on their payment date
+    // by AddPaymentUseCase). An unpaid invoice is a liability, not yet an
+    // expense — it stops being double-counted here by due date regardless
+    // of whether it's actually been paid.
+    const totalExpenses: CurrencySplit = recordTotals.expense;
     const totalIncome = recordTotals.income;
 
     const netBalance: CurrencySplit = {

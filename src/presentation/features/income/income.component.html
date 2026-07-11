@@ -207,9 +207,16 @@
               </td>
               <td style="text-align:center;"><app-currency-badge [currency]="r.currency" /></td>
               <td style="font-size:.82rem;color:var(--text-primary);">{{ r.source ?? '—' }}</td>
-              <td style="font-size:.8rem;color:var(--text-dim);">{{ r.notes ?? '—' }}</td>
+              <td style="font-size:.8rem;color:var(--text-dim);">
+                {{ r.notes ?? '—' }}
+                @if (r.paymentId) {
+                  <span class="badge" style="background:var(--gold-bg);color:var(--gold);margin-left:6px;">via invoice payment</span>
+                }
+              </td>
               <td style="text-align:center;width:48px;">
-                @if (deletingId() === r.id) {
+                @if (r.paymentId) {
+                  <span title="Delete the invoice payment to remove this" style="color:var(--text-dim);font-size:.68rem;">—</span>
+                } @else if (deletingId() === r.id) {
                   <div style="display:flex;gap:4px;justify-content:center;align-items:center;">
                     <button (click)="confirmDelete(r.id)"
                             style="padding:3px 8px;border-radius:4px;border:none;background:var(--red);color:#fff;font-size:.7rem;font-weight:600;cursor:pointer;">Yes</button>

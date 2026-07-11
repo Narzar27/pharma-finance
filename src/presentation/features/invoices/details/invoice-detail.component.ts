@@ -12,6 +12,7 @@ import { AddPaymentUseCase } from '../../../../application/use-cases/invoices/ad
 import { DeleteInvoiceUseCase } from '../../../../application/use-cases/invoices/delete-invoice.use-case';
 import { DeletePaymentUseCase } from '../../../../application/use-cases/invoices/delete-payment.use-case';
 import { Currency } from '../../../../domain/models/invoice.model';
+import { toInvoiceCurrency } from '../../../../domain/services/invoice-status.service';
 
 @Component({
   selector: 'app-invoice-detail',
@@ -38,7 +39,7 @@ export class InvoiceDetailComponent implements OnInit {
   remaining = computed(() => {
     const d = this.detail();
     if (!d) return 0;
-    const paid = d.invoice.currency === 'USD' ? d.totalPaid.usd : d.totalPaid.lbp;
+    const paid = d.payments.reduce((sum, p) => sum + toInvoiceCurrency(p, d.invoice.currency), 0);
     return Math.max(0, d.invoice.amount - paid);
   });
 
@@ -46,8 +47,17 @@ export class InvoiceDetailComponent implements OnInit {
     amount: 0,
     currency: 'USD' as Currency,
     paymentDate: new Date().toISOString().split('T')[0],
+    exchangeRate: null as number | null,
     notes: '',
   };
+
+  // Plain method, not computed(): payForm.currency is an ngModel-bound
+  // property, not a signal, so a computed() here would never re-evaluate
+  // after its first read.
+  isCrossCurrency(): boolean {
+    const invoiceCurrency = this.detail()?.invoice.currency;
+    return !!invoiceCurrency && this.payForm.currency !== invoiceCurrency;
+  }
 
   async ngOnInit() {
     const id = this.route.snapshot.paramMap.get('id')!;
@@ -76,17 +86,21 @@ export class InvoiceDetailComponent implements OnInit {
   async onAddPayment() {
     const d = this.detail();
     if (!d || !this.payForm.amount) return;
+    if (this.isCrossCurrency() && !this.payForm.exchangeRate) return;
+
     this.addingPayment.set(true);
     await this.addPayment.execute({
       invoiceId: d.invoice.id,
       amountPaid: this.payForm.amount,
       currency: this.payForm.currency,
       paymentDate: this.payForm.paymentDate,
+      exchangeRate: this.isCrossCurrency() ? (this.payForm.exchangeRate ?? undefined) : undefined,
       notes: this.payForm.notes || undefined,
     });
     const updated = await this.getDetail.execute(d.invoice.id);
     this.detail.set(updated);
     this.payForm.amount = 0;
+    this.payForm.exchangeRate = null;
     this.payForm.notes = '';
     this.addingPayment.set(false);
   }

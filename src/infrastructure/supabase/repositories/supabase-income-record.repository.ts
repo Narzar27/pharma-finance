@@ -33,6 +33,7 @@ export class SupabaseIncomeRecordRepository extends IncomeRecordRepository {
         type: dto.type ?? 'income',
         source: dto.source,
         notes: dto.notes,
+        payment_id: dto.paymentId ?? null,
       })
       .select()
       .single();
@@ -87,6 +88,7 @@ export class SupabaseIncomeRecordRepository extends IncomeRecordRepository {
       source: row.source,
       notes: row.notes,
       createdAt: row.created_at,
+      paymentId: row.payment_id ?? undefined,
     };
   }
 }

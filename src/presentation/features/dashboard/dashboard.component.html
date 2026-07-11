@@ -7,6 +7,24 @@
 
 <div style="padding:28px;">
 
+  <!-- Date range for Net -->
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;">
+    @for (p of presets; track p.value) {
+      <button (click)="selectPreset(p.value)"
+              [class]="preset() === p.value ? 'btn-primary' : 'btn-ghost'"
+              style="font-size:.78rem;padding:7px 14px;">
+        {{ p.label }}
+      </button>
+    }
+    @if (preset() === 'custom') {
+      <input class="input font-mono" type="date" [(ngModel)]="customFrom"
+             (ngModelChange)="onCustomChange()" style="width:auto;" />
+      <span style="color:var(--text-dim);font-size:.8rem;">to</span>
+      <input class="input font-mono" type="date" [(ngModel)]="customTo"
+             (ngModelChange)="onCustomChange()" style="width:auto;" />
+    }
+  </div>
+
   <!-- Stat grid -->
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:28px;">
 
@@ -22,14 +40,16 @@
       <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">{{ unpaidLbpCount() }} invoices</p>
     </div>
 
-    <div class="stat-card fade-up fade-up-3">
-      <p class="stat-label">Income this month — USD</p>
-      <p class="stat-value" style="color:var(--green);">{{ incomeUsd() | currencyFormat:'USD' }}</p>
+    <div class="stat-card fade-up fade-up-3" style="border-color:{{netUsd() >= 0 ? 'var(--green)' : 'var(--red)'}};">
+      <p class="stat-label">Net — USD</p>
+      <p class="stat-value" [style.color]="netUsd() >= 0 ? 'var(--green)' : 'var(--red)'">{{ netUsd() | currencyFormat:'USD' }}</p>
+      <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">income − expenses, selected range</p>
     </div>
 
-    <div class="stat-card fade-up fade-up-4">
-      <p class="stat-label">Income this month — LBP</p>
-      <p class="stat-value" style="color:var(--green);">{{ incomeLbp() | currencyFormat:'LBP' }}</p>
+    <div class="stat-card fade-up fade-up-4" style="border-color:{{netLbp() >= 0 ? 'var(--green)' : 'var(--red)'}};">
+      <p class="stat-label">Net — LBP</p>
+      <p class="stat-value" [style.color]="netLbp() >= 0 ? 'var(--green)' : 'var(--red)'">{{ netLbp() | currencyFormat:'LBP' }}</p>
+      <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">income − expenses, selected range</p>
     </div>
 
     <div class="stat-card fade-up fade-up-5" style="border-color:{{overdueInvoices().length > 0 ? 'var(--red)' : 'var(--border)'}};">
