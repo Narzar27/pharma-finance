@@ -35,9 +35,11 @@ export class SupabaseInvoiceRepository extends InvoiceRepository {
   }
 
   async create(dto: CreateInvoiceDto): Promise<Invoice> {
+    const tenantId = await this.currentTenantId();
     const { data, error } = await this.db
       .from('invoices')
       .insert({
+        tenant_id: tenantId,
         supplier_id: dto.supplierId,
         amount: dto.amount,
         currency: dto.currency,
@@ -49,6 +51,18 @@ export class SupabaseInvoiceRepository extends InvoiceRepository {
       .single();
     if (error) throw error;
     return this.map(data);
+  }
+
+  private async currentTenantId(): Promise<string> {
+    const { data: userData } = await this.db.auth.getUser();
+    const { data, error } = await this.db
+      .from('tenant_members')
+      .select('tenant_id')
+      .eq('user_id', userData.user?.id)
+      .eq('status', 'active')
+      .single();
+    if (error || !data) throw new Error('No active business membership found.');
+    return data.tenant_id;
   }
 
   async delete(id: string): Promise<void> {
