@@ -3,6 +3,7 @@ import { TopBarComponent } from '../../../core/layout/top-bar/top-bar.component'
 import { ListPendingApprovalsUseCase } from '../../../../application/use-cases/admin/list-pending-approvals.use-case';
 import { DecideTenantSignupUseCase } from '../../../../application/use-cases/admin/decide-tenant-signup.use-case';
 import { DecideTeammateRequestUseCase } from '../../../../application/use-cases/admin/decide-teammate-request.use-case';
+import { ResendTeammateInviteUseCase } from '../../../../application/use-cases/admin/resend-teammate-invite.use-case';
 import { PendingApprovalItem } from '../../../../domain/models/tenant-member.model';
 
 interface DecidedItem extends PendingApprovalItem {
@@ -21,6 +22,7 @@ export class AdminApprovalsComponent implements OnInit {
   private listPending = inject(ListPendingApprovalsUseCase);
   private decideTenantSignup = inject(DecideTenantSignupUseCase);
   private decideTeammateRequest = inject(DecideTeammateRequestUseCase);
+  private resendTeammateInvite = inject(ResendTeammateInviteUseCase);
 
   loading = signal(true);
   actingOn = signal<string | null>(null);
@@ -63,10 +65,13 @@ export class AdminApprovalsComponent implements OnInit {
 
   async resendInvite(item: DecidedItem) {
     this.actingOn.set(item.member.id);
-    const { inviteResult } = await this.decideTeammateRequest.execute(item.member.id, true);
-    this.decided.update(list =>
-      list.map(d => d.member.id === item.member.id ? { ...d, inviteFailed: inviteResult?.ok === false } : d)
-    );
-    this.actingOn.set(null);
+    try {
+      const inviteResult = await this.resendTeammateInvite.execute(item.member.id);
+      this.decided.update(list =>
+        list.map(d => d.member.id === item.member.id ? { ...d, inviteFailed: inviteResult?.ok === false } : d)
+      );
+    } finally {
+      this.actingOn.set(null);
+    }
   }
 }
