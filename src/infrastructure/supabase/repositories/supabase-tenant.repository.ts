@@ -19,7 +19,19 @@ export class SupabaseTenantRepository extends TenantRepository {
     return this.map(data);
   }
 
+  async setDefaultExchangeRate(id: string, rate: number | null): Promise<Tenant> {
+    const { data, error } = await this.db.rpc('set_default_exchange_rate', { p_tenant_id: id, p_rate: rate });
+    if (error) throw error;
+    return this.map(data);
+  }
+
   private map(row: any): Tenant {
-    return { id: row.id, name: row.name, status: row.status, createdAt: row.created_at };
+    return {
+      id: row.id,
+      name: row.name,
+      status: row.status,
+      createdAt: row.created_at,
+      defaultExchangeRate: row.default_exchange_rate != null ? Number(row.default_exchange_rate) : undefined,
+    };
   }
 }

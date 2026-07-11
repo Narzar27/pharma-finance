@@ -37,6 +37,35 @@
     }
   </div>
 
+  <div class="card fade-up" style="padding:20px 24px;margin-bottom:20px;">
+    @if (editingRate()) {
+      <div class="responsive-grid" style="display:flex;gap:10px;align-items:center;">
+        <input class="input font-mono" type="number" min="0" step="any" [(ngModel)]="rateDraft" name="defaultRate"
+               placeholder="e.g. 89500" style="max-width:200px;" [disabled]="savingRate()" />
+        <button class="btn-primary" style="padding:8px 16px;font-size:.8rem;" [disabled]="savingRate()" (click)="saveRate()">
+          {{ savingRate() ? 'Saving...' : 'Save' }}
+        </button>
+        <button class="btn-ghost" style="padding:8px 16px;font-size:.8rem;" [disabled]="savingRate()" (click)="cancelEditRate()">Cancel</button>
+      </div>
+      @if (rateError()) {
+        <p style="font-size:.8rem;color:var(--red);margin:10px 0 0;">{{ rateError() }}</p>
+      }
+    } @else {
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div>
+          <p class="stat-label" style="margin:0 0 4px;">Default USD → LBP rate</p>
+          <p class="font-mono" style="font-size:1.2rem;color:var(--text-primary);margin:0;font-weight:600;">
+            {{ business()?.defaultExchangeRate ? ('1 USD = ' + business()!.defaultExchangeRate + ' LBP') : 'Not set' }}
+          </p>
+          <p style="font-size:.72rem;color:var(--text-dim);margin:6px 0 0;">Pre-fills the rate when paying an invoice in a different currency — still editable per payment.</p>
+        </div>
+        @if (canManage()) {
+          <button class="btn-ghost" style="padding:5px 12px;font-size:.72rem;flex-shrink:0;" (click)="startEditRate()">Edit</button>
+        }
+      </div>
+    }
+  </div>
+
   @if (showForm()) {
     <div class="modal-overlay" (click)="closeIfBackdrop($event)">
       <div class="modal fade-up" style="max-width:460px;" (click)="$event.stopPropagation()">

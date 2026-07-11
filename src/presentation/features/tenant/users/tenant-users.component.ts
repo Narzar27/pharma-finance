@@ -6,6 +6,7 @@ import { ListTeamMembersUseCase } from '../../../../application/use-cases/tenant
 import { RequestAddTeammateUseCase } from '../../../../application/use-cases/tenants/request-add-teammate.use-case';
 import { GetTenantUseCase } from '../../../../application/use-cases/tenants/get-tenant.use-case';
 import { RenameTenantUseCase } from '../../../../application/use-cases/tenants/rename-tenant.use-case';
+import { SetDefaultExchangeRateUseCase } from '../../../../application/use-cases/tenants/set-default-exchange-rate.use-case';
 import { canManageTeam } from '../../../../domain/services/membership-access.service';
 import { TenantMember, MemberRole } from '../../../../domain/models/tenant-member.model';
 import { Tenant } from '../../../../domain/models/tenant.model';
@@ -22,6 +23,7 @@ export class TenantUsersComponent implements OnInit {
   private requestAddTeammate = inject(RequestAddTeammateUseCase);
   private getTenant = inject(GetTenantUseCase);
   private renameTenant = inject(RenameTenantUseCase);
+  private setDefaultExchangeRate = inject(SetDefaultExchangeRateUseCase);
   tenant = inject(CurrentTenantService);
 
   loading = signal(true);
@@ -35,6 +37,11 @@ export class TenantUsersComponent implements OnInit {
   nameDraft = '';
   renaming = signal(false);
   renameError = signal('');
+
+  editingRate = signal(false);
+  rateDraft: number | null = null;
+  savingRate = signal(false);
+  rateError = signal('');
 
   canManage = computed(() => {
     const role = this.tenant.membership()?.role;
@@ -80,6 +87,33 @@ export class TenantUsersComponent implements OnInit {
       this.renameError.set(e?.message ?? 'Something went wrong. Please try again.');
     } finally {
       this.renaming.set(false);
+    }
+  }
+
+  startEditRate() {
+    this.rateDraft = this.business()?.defaultExchangeRate ?? null;
+    this.rateError.set('');
+    this.editingRate.set(true);
+  }
+
+  cancelEditRate() {
+    this.editingRate.set(false);
+    this.rateError.set('');
+  }
+
+  async saveRate() {
+    const tenantId = this.tenant.membership()?.tenantId;
+    if (!tenantId) return;
+    this.savingRate.set(true);
+    this.rateError.set('');
+    try {
+      const updated = await this.setDefaultExchangeRate.execute(tenantId, this.rateDraft);
+      this.business.set(updated);
+      this.editingRate.set(false);
+    } catch (e: any) {
+      this.rateError.set(e?.message ?? 'Something went wrong. Please try again.');
+    } finally {
+      this.savingRate.set(false);
     }
   }
 

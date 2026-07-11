@@ -11,6 +11,8 @@ import { GetInvoiceDetailUseCase, InvoiceDetail } from '../../../../application/
 import { AddPaymentUseCase } from '../../../../application/use-cases/invoices/add-payment.use-case';
 import { DeleteInvoiceUseCase } from '../../../../application/use-cases/invoices/delete-invoice.use-case';
 import { DeletePaymentUseCase } from '../../../../application/use-cases/invoices/delete-payment.use-case';
+import { GetTenantUseCase } from '../../../../application/use-cases/tenants/get-tenant.use-case';
+import { CurrentTenantService } from '../../../core/tenant/current-tenant.service';
 import { Currency } from '../../../../domain/models/invoice.model';
 import { toInvoiceCurrency } from '../../../../domain/services/invoice-status.service';
 
@@ -29,12 +31,15 @@ export class InvoiceDetailComponent implements OnInit {
   private addPayment = inject(AddPaymentUseCase);
   private deleteInvoice = inject(DeleteInvoiceUseCase);
   private deletePayment = inject(DeletePaymentUseCase);
+  private getTenant = inject(GetTenantUseCase);
+  private currentTenant = inject(CurrentTenantService);
 
   loading = signal(true);
   addingPayment = signal(false);
   confirmDeleteInvoice = signal(false);
   deletingPaymentId = signal<string | null>(null);
   detail = signal<InvoiceDetail | null>(null);
+  defaultExchangeRate: number | null = null;
 
   remaining = computed(() => {
     const d = this.detail();
@@ -64,7 +69,22 @@ export class InvoiceDetailComponent implements OnInit {
     const result = await this.getDetail.execute(id);
     this.detail.set(result);
     if (result) this.payForm.currency = result.invoice.currency;
+
+    const tenantId = this.currentTenant.membership()?.tenantId;
+    if (tenantId) {
+      const tenant = await this.getTenant.execute(tenantId);
+      this.defaultExchangeRate = tenant?.defaultExchangeRate ?? null;
+    }
+
     this.loading.set(false);
+  }
+
+  // Called when the payment currency changes — pre-fills the exchange
+  // rate once cross-currency becomes relevant, still freely editable.
+  onPayCurrencyChange() {
+    if (this.isCrossCurrency() && !this.payForm.exchangeRate) {
+      this.payForm.exchangeRate = this.defaultExchangeRate;
+    }
   }
 
   async doDeleteInvoice() {
