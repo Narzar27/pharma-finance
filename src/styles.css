@@ -330,6 +330,9 @@ select.input { cursor: pointer; appearance: none; }
   main > div[style*="padding:28px"],
   main > div[style*="padding: 28px"] { padding: 16px !important; }
 
+  /* Top bar padding reduced to match */
+  header { padding: 0 16px !important; }
+
   /* Tables scroll horizontally */
   .table-wrap { overflow-x: auto; }
   .table-wrap table { min-width: 480px; }
@@ -344,6 +347,9 @@ select.input { cursor: pointer; appearance: none; }
     width: 100%;
   }
   .modal-sm { max-width: 100%; }
+
+  /* Multi-column form grids stack to one column */
+  .responsive-grid { grid-template-columns: 1fr !important; }
 }
 
 @media (min-width: 768px) {

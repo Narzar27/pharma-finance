@@ -45,7 +45,7 @@
             </select>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 120px;gap:14px;margin-bottom:20px;">
+          <div class="responsive-grid" style="display:grid;grid-template-columns:1fr 120px;gap:14px;margin-bottom:20px;">
             <div>
               <label class="label">Amount *</label>
               <input class="input font-mono" type="number" [(ngModel)]="form.amount" name="amount" required min="0" step="0.01" placeholder="0.00" />
@@ -59,7 +59,7 @@
             </div>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+          <div class="responsive-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
             <div>
               <label class="label">Issue Date *</label>
               <input class="input font-mono" type="date" [(ngModel)]="form.issueDate" name="issueDate" required />

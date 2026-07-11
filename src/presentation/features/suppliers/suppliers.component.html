@@ -57,7 +57,7 @@
             <div style="width:8px;height:8px;border-radius:50%;background:var(--green);margin-top:6px;flex-shrink:0;box-shadow:0 0 6px var(--green);"></div>
           </div>
           <hr class="divider" style="margin-bottom:14px;" />
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="responsive-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div>
               <p style="font-size:.65rem;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em;margin:0 0 3px;">Owed (USD)</p>
               <p class="font-mono" style="font-size:.9rem;font-weight:600;margin:0;" [style.color]="item.unpaidUsd > 0 ? 'var(--red)' : 'var(--text-dim)'">
