@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "pharma-finance": {
+    "ledgerra": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:class": {
@@ -87,10 +87,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "pharma-finance:build:production"
+              "buildTarget": "ledgerra:build:production"
             },
             "development": {
-              "buildTarget": "pharma-finance:build:development"
+              "buildTarget": "ledgerra:build:development"
             }
           },
           "defaultConfiguration": "development"

@@ -1,6 +1,6 @@
 {
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/pharma-finance/browser",
+  "outputDirectory": "dist/ledgerra/browser",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
