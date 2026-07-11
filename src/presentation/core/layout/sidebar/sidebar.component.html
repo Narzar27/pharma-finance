@@ -33,7 +33,7 @@
   <!-- Nav -->
   <div style="padding:12px 10px;flex:1;overflow-y:auto;">
     <p style="font-size:.62rem;font-weight:600;color:var(--text-dim);letter-spacing:.1em;text-transform:uppercase;padding:0 10px;margin:0 0 6px;">Menu</p>
-    @for (item of navItems; track item.path) {
+    @for (item of navItems(); track item.path) {
       <a [routerLink]="item.path"
          routerLinkActive="active-link"
          [routerLinkActiveOptions]="{exact: item.exact ?? false}"

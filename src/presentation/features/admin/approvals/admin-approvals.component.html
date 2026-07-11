@@ -1,0 +1,68 @@
+<!-- src/presentation/features/admin/approvals/admin-approvals.component.html -->
+<app-top-bar title="Approvals" />
+
+<div style="padding:28px;">
+  @if (loading()) {
+    <div style="padding:56px;text-align:center;color:var(--text-dim);font-size:.875rem;">Loading approvals...</div>
+  } @else {
+    <h2 class="section-title" style="margin-bottom:14px;">Pending ({{ pending().length }})</h2>
+    @if (!hasPending()) {
+      <div style="text-align:center;padding:48px;color:var(--text-dim);font-size:.875rem;">Nothing waiting on you right now.</div>
+    } @else {
+      <div class="table-wrap fade-up" style="margin-bottom:36px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Kind</th><th>Business</th><th>Name</th><th>Email</th><th>Role</th><th>Requested</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of pending(); track item.member.id) {
+              <tr>
+                <td>{{ item.kind === 'business' ? 'New business' : 'New teammate' }}</td>
+                <td class="font-mono" style="font-size:.8rem;">{{ item.tenant.name }}</td>
+                <td>{{ item.member.firstName }} {{ item.member.lastName }}</td>
+                <td class="font-mono" style="font-size:.8rem;">{{ item.member.email }}</td>
+                <td>{{ item.member.role }}</td>
+                <td class="font-mono" style="font-size:.78rem;color:var(--text-secondary);">{{ item.member.createdAt | date:'mediumDate' }}</td>
+                <td style="text-align:right;white-space:nowrap;">
+                  <button class="btn-primary" style="padding:5px 12px;font-size:.75rem;margin-right:6px;"
+                          [disabled]="actingOn() === item.member.id" (click)="decide(item, true)">Approve</button>
+                  <button class="btn-ghost" style="padding:5px 12px;font-size:.75rem;"
+                          [disabled]="actingOn() === item.member.id" (click)="decide(item, false)">Reject</button>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+
+    @if (decided().length > 0) {
+      <h2 class="section-title" style="margin-bottom:14px;">History</h2>
+      <div class="table-wrap fade-up">
+        <table>
+          <thead>
+            <tr><th>Kind</th><th>Business</th><th>Name</th><th>Outcome</th><th></th></tr>
+          </thead>
+          <tbody>
+            @for (item of decided(); track item.member.id) {
+              <tr>
+                <td>{{ item.kind === 'business' ? 'New business' : 'New teammate' }}</td>
+                <td class="font-mono" style="font-size:.8rem;">{{ item.tenant.name }}</td>
+                <td>{{ item.member.firstName }} {{ item.member.lastName }}</td>
+                <td [style.color]="item.outcome === 'approved' ? 'var(--green)' : 'var(--red)'">{{ item.outcome }}</td>
+                <td>
+                  @if (item.inviteFailed) {
+                    <button class="btn-ghost" style="padding:3px 10px;font-size:.72rem;color:var(--amber);"
+                            [disabled]="actingOn() === item.member.id" (click)="resendInvite(item)">⚠ Invite failed — Resend</button>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  }
+</div>
