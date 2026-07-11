@@ -1,0 +1,84 @@
+<!-- src/presentation/features/tenant/users/tenant-users.component.html -->
+<app-top-bar title="Team">
+  @if (canManage()) {
+    <button class="btn-primary" (click)="showForm.set(true)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Add User
+    </button>
+  }
+</app-top-bar>
+
+<div style="padding:28px;">
+  @if (showForm()) {
+    <div class="modal-overlay" (click)="closeIfBackdrop($event)">
+      <div class="modal fade-up" style="max-width:460px;" (click)="$event.stopPropagation()">
+        <h3 style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--text-primary);margin:0 0 24px;font-weight:400;">Add teammate</h3>
+        <form (ngSubmit)="onSubmit()">
+          <div style="margin-bottom:16px;">
+            <label class="label" for="addEmail">Email</label>
+            <input id="addEmail" class="input" type="email" name="email" [(ngModel)]="form.email" required />
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div>
+              <label class="label" for="addFirstName">First name</label>
+              <input id="addFirstName" class="input" type="text" name="firstName" [(ngModel)]="form.firstName" required />
+            </div>
+            <div>
+              <label class="label" for="addLastName">Last name</label>
+              <input id="addLastName" class="input" type="text" name="lastName" [(ngModel)]="form.lastName" required />
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+            <div>
+              <label class="label" for="addDob">Date of birth</label>
+              <input id="addDob" class="input font-mono" type="date" name="dob" [(ngModel)]="form.dob" required />
+            </div>
+            <div>
+              <label class="label" for="addRole">Role</label>
+              <select id="addRole" class="input" name="role" [(ngModel)]="form.role">
+                <option value="user">User</option>
+                <option value="manager">Manager</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          @if (error()) {
+            <div style="background:var(--red-bg);border:1px solid rgba(231,76,60,.25);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:18px;">
+              <p style="font-size:.8rem;color:var(--red);margin:0;">{{ error() }}</p>
+            </div>
+          }
+
+          <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:4px;border-top:1px solid var(--border);">
+            <button type="button" class="btn-ghost" (click)="showForm.set(false)">Cancel</button>
+            <button type="submit" class="btn-primary" [disabled]="saving()">{{ saving() ? 'Sending...' : 'Send for approval' }}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  @if (loading()) {
+    <div style="padding:56px;text-align:center;color:var(--text-dim);font-size:.875rem;">Loading team...</div>
+  } @else {
+    <div class="table-wrap fade-up">
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+        <tbody>
+          @for (m of members(); track m.id) {
+            <tr>
+              <td style="font-weight:500;">{{ m.firstName }} {{ m.lastName }}</td>
+              <td class="font-mono" style="font-size:.8rem;">{{ m.email }}</td>
+              <td>{{ m.role }}</td>
+              <td>
+                <span class="badge" [class.badge-paid]="m.status === 'active'" [class.badge-partial]="m.status === 'pending' || m.status === 'invited'" [class.badge-unpaid]="m.status === 'rejected'">
+                  {{ m.status }}
+                </span>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>
