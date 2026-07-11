@@ -1,7 +1,7 @@
 import { Routes } from '@angular/router';
 import { tenantAccessGuard } from '../presentation/core/auth/tenant-access.guard';
 import { platformAdminGuard } from '../presentation/core/auth/platform-admin.guard';
-import { noActiveMembershipGuard } from '../presentation/core/auth/no-active-membership.guard';
+import { noExistingMembershipGuard } from '../presentation/core/auth/no-active-membership.guard';
 
 export const routes: Routes = [
   {
@@ -11,7 +11,7 @@ export const routes: Routes = [
   },
   {
     path: 'signup',
-    canActivate: [noActiveMembershipGuard],
+    canActivate: [noExistingMembershipGuard],
     loadComponent: () =>
       import('../presentation/features/auth/signup/signup.component').then((m) => m.SignupComponent),
   },
