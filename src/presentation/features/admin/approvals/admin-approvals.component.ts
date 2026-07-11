@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject, signal, computed, OnInit } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { TopBarComponent } from '../../../core/layout/top-bar/top-bar.component';
 import { ListPendingApprovalsUseCase } from '../../../../application/use-cases/admin/list-pending-approvals.use-case';
 import { DecideTenantSignupUseCase } from '../../../../application/use-cases/admin/decide-tenant-signup.use-case';
@@ -14,7 +15,7 @@ interface DecidedItem extends PendingApprovalItem {
 @Component({
   selector: 'app-admin-approvals',
   standalone: true,
-  imports: [TopBarComponent],
+  imports: [TopBarComponent, DatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './admin-approvals.component.html',
 })
